@@ -12,6 +12,7 @@
     --surface2: #181e2e;
     --border: #1e2a40;
     --accent: #00e5a0;
+    --accent-dark: #00b378;
     --accent2: #3b82f6;
     --warn: #f59e0b;
     --danger: #ef4444;
@@ -293,6 +294,7 @@
   .profit-neg { color: var(--danger); }
   .profit-zero { color: var(--muted2); }
 
+  .apy-very-high { color: var(--accent-dark); font-weight: 700; }
   .apy-high { color: var(--accent); font-weight: 700; }
   .apy-mid { color: var(--warn); }
   .apy-low { color: var(--muted2); }
@@ -452,8 +454,10 @@
     font-family: 'Space Mono', monospace;
   }
 
+  .card .c-value.dark-green { color: var(--accent-dark); }
   .card .c-value.green { color: var(--accent); }
   .card .c-value.yellow { color: var(--warn); }
+  .card .c-value.gray { color: var(--muted2); }
 
   /* Export button animation */
   @keyframes pulse {
@@ -507,7 +511,7 @@
     </div>
     <div class="card">
       <div class="c-label">Средняя доходность</div>
-      <div class="c-value yellow" id="avgYield">0.00%</div>
+      <div class="c-value" id="avgYield">0.00%</div>
     </div>
     <div class="card">
       <div class="c-label">Лучший протокол</div>
@@ -694,7 +698,7 @@ function render() {
     let apyStr = '—', apyClass = 'profit-zero';
     if (apy !== null) {
       apyStr = fmtPct(apy);
-      apyClass = apy > 0.1 ? 'apy-high' : apy > 0.03 ? 'apy-mid' : 'apy-low';
+      apyClass = apy > 0.15 ? 'apy-very-high' : apy > 0.1 ? 'apy-high' : apy > 0.03 ? 'apy-mid' : 'apy-low';
     }
 
     const barPct = Math.min(100, Math.abs(returnPct) * 100 / 0.25 * 100).toFixed(1);
@@ -758,10 +762,14 @@ function updateStats() {
   profitEl.textContent = (totalProfit >= 0 ? '+' : '') + fmt(totalProfit);
   profitEl.style.color = totalProfit >= 0 ? 'var(--accent)' : 'var(--danger)';
 
-  document.getElementById('totalYield').textContent = (totalYield >= 0 ? '+' : '') + fmtPct(totalYield);
+  const totalYieldEl = document.getElementById('totalYield');
+  totalYieldEl.textContent = (totalYield >= 0 ? '+' : '') + fmtPct(totalYield);
+  totalYieldEl.style.color = totalYield < 0 ? 'var(--danger)' : totalYield > 0.15 ? 'var(--accent-dark)' : totalYield > 0.1 ? 'var(--accent)' : totalYield > 0.03 ? 'var(--warn)' : 'var(--muted2)';
   document.getElementById('openCount').textContent = open.length;
   document.getElementById('closedCount').textContent = closed.length;
-  document.getElementById('avgYield').textContent = (avgYield >= 0 ? '+' : '') + fmtPct(avgYield);
+  const avgEl = document.getElementById('avgYield');
+  avgEl.textContent = (avgYield >= 0 ? '+' : '') + fmtPct(avgYield);
+  avgEl.className = 'c-value ' + (avgYield > 0.15 ? 'dark-green' : avgYield > 0.1 ? 'green' : avgYield > 0.03 ? 'yellow' : 'gray');
   document.getElementById('bestProtocol').textContent = best || '—';
 }
 
