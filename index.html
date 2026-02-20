@@ -98,6 +98,11 @@
   }
 
   .stat-pill .value.neutral { color: var(--text); }
+  .stat-pill .value.yield-dark-green { color: var(--accent-dark) !important; }
+  .stat-pill .value.yield-green { color: var(--accent) !important; }
+  .stat-pill .value.yield-yellow { color: var(--warn) !important; }
+  .stat-pill .value.yield-gray { color: var(--muted2) !important; }
+  .stat-pill .value.yield-danger { color: var(--danger) !important; }
 
   /* Action bar */
   .action-bar {
@@ -764,7 +769,8 @@ function updateStats() {
 
   const totalYieldEl = document.getElementById('totalYield');
   totalYieldEl.textContent = (totalYield >= 0 ? '+' : '') + fmtPct(totalYield);
-  totalYieldEl.style.color = totalYield < 0 ? 'var(--danger)' : totalYield > 0.15 ? 'var(--accent-dark)' : totalYield > 0.1 ? 'var(--accent)' : totalYield > 0.03 ? 'var(--warn)' : 'var(--muted2)';
+  const yieldTier = totalYield < 0 ? 'yield-danger' : totalYield > 0.15 ? 'yield-dark-green' : totalYield > 0.1 ? 'yield-green' : totalYield > 0.03 ? 'yield-yellow' : 'yield-gray';
+  totalYieldEl.className = 'value ' + yieldTier;
   document.getElementById('openCount').textContent = open.length;
   document.getElementById('closedCount').textContent = closed.length;
   const avgEl = document.getElementById('avgYield');
