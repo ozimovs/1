@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeBank API — проверка</title>
+  <style>
+    body { font-family: monospace; padding: 24px; background: #111; color: #eee; }
+    h1 { font-size: 18px; margin-bottom: 16px; }
+    button { padding: 10px 20px; font-size: 14px; cursor: pointer; }
+    pre { background: #222; padding: 16px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    .status { margin: 12px 0; font-weight: bold; }
+    .ok { color: #0a0; }
+    .err { color: #f44; }
+  </style>
+</head>
+<body>
+  <h1>DeBank API — проверка ключа и запроса</h1>
+  <button onclick="check()">Проверить /api/debank-test</button>
+  <div class="status" id="status"></div>
+  <pre id="output"></pre>
+
+  <script>
+    async function check() {
+      const statusEl = document.getElementById('status');
+      const outputEl = document.getElementById('output');
+
+      statusEl.textContent = 'Загрузка...';
+      statusEl.className = 'status';
+      outputEl.textContent = '';
+
+      try {
+        const base = window.location.origin;
+        const res = await fetch(base + '/api/debank-test');
+        const data = await res.json();
+
+        statusEl.textContent = data.ok ? 'OK' : 'Ошибка';
+        statusEl.className = 'status ' + (data.ok ? 'ok' : 'err');
+        outputEl.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        statusEl.textContent = 'Ошибка запроса';
+        statusEl.className = 'status err';
+        outputEl.textContent = err.message;
+      }
+    }
+  </script>
+</body>
+</html>
