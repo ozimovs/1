@@ -6,7 +6,7 @@
 <title>DeFi Stable</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  :root {
+  :root, [data-theme="dark"] {
     --bg: #0a0d12;
     --surface: #111520;
     --surface2: #181e2e;
@@ -19,7 +19,26 @@
     --text: #e2e8f0;
     --muted: #4a5568;
     --muted2: #718096;
+    --btn-primary-text: #0a0d12;
   }
+
+  [data-theme="light"] {
+    --bg: #f1f5f9;
+    --surface: #ffffff;
+    --surface2: #e2e8f0;
+    --border: #cbd5e1;
+    --accent: #059669;
+    --accent-dark: #047857;
+    --accent2: #2563eb;
+    --warn: #d97706;
+    --danger: #dc2626;
+    --text: #1e293b;
+    --muted: #64748b;
+    --muted2: #94a3b8;
+    --btn-primary-text: #ffffff;
+  }
+
+  [data-theme="light"] body::before { opacity: 0.15; }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -29,6 +48,7 @@
     font-family: 'Syne', sans-serif;
     min-height: 100vh;
     padding: 24px;
+    transition: background 0.3s, color 0.3s;
   }
 
   /* Noise texture overlay */
@@ -126,7 +146,7 @@
 
   .btn-primary {
     background: var(--accent);
-    color: #0a0d12;
+    color: var(--btn-primary-text);
   }
 
   .btn-primary:hover { background: #00ffb2; transform: translateY(-1px); }
@@ -171,7 +191,7 @@
 
   .tab.active {
     background: var(--accent);
-    color: #0a0d12;
+    color: var(--btn-primary-text);
   }
 
   .tab:not(.active):hover { color: var(--text); }
@@ -481,7 +501,7 @@
     height: 56px;
     border-radius: 50%;
     background: var(--accent);
-    color: #0a0d12;
+    color: var(--btn-primary-text);
     border: none;
     cursor: pointer;
     box-shadow: 0 4px 20px rgba(0, 229, 160, 0.4);
@@ -497,12 +517,47 @@
     box-shadow: 0 6px 24px rgba(0, 229, 160, 0.5);
   }
 
+  /* Theme & Lang toggles */
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .toggle-group {
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    gap: 2px;
+  }
+  .toggle-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted2);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.15s;
+  }
+  .toggle-btn:hover { color: var(--text); }
+  .toggle-btn.active {
+    background: var(--accent);
+    color: var(--btn-primary-text);
+  }
+  .toggle-btn.theme-btn { padding: 6px 10px; font-size: 14px; }
+
   /* Responsive */
   @media (max-width: 900px) {
     .form-grid { grid-template-columns: 1fr; }
     .form-group.full { grid-column: 1; }
     header { flex-direction: column; gap: 20px; align-items: flex-start; }
     .header-stats { justify-content: flex-start; }
+    .header-controls { flex-shrink: 0; }
   }
 </style>
 </head>
@@ -510,21 +565,33 @@
 <div class="wrapper">
 
   <header>
-    <div class="logo-block">
-      <h1>DeFi <span>Stable</span></h1>
-      <p>Учёт позиций · Yield Tracker</p>
+    <div style="display:flex; align-items:flex-end; gap:24px;">
+      <div class="logo-block">
+        <h1>DeFi <span>Stable</span></h1>
+        <p data-i18n="subtitle">Учёт позиций · Yield Tracker</p>
+      </div>
+      <div class="header-controls">
+      <div class="toggle-group">
+        <button class="toggle-btn theme-btn active" id="themeDark" onclick="setTheme('dark')" title="Dark" aria-label="Dark">🌙</button>
+        <button class="toggle-btn theme-btn" id="themeLight" onclick="setTheme('light')" title="Light" aria-label="Light">☀️</button>
+      </div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="langRu" onclick="setLang('ru')">RU</button>
+        <button class="toggle-btn" id="langEn" onclick="setLang('en')">EN</button>
+      </div>
+    </div>
     </div>
     <div class="header-stats">
       <div class="stat-pill">
-        <div class="label">Всего вложено</div>
+        <div class="label" data-i18n="totalDeposited">Всего вложено</div>
         <div class="value neutral" id="totalDeposit">—</div>
       </div>
       <div class="stat-pill">
-        <div class="label">Прибыль</div>
+        <div class="label" data-i18n="profit">Прибыль</div>
         <div class="value" id="totalProfit">—</div>
       </div>
       <div class="stat-pill">
-        <div class="label">Текущая доходность</div>
+        <div class="label" data-i18n="currentYield">Текущая доходность</div>
         <div class="value" id="totalYield">—</div>
       </div>
     </div>
@@ -532,30 +599,30 @@
 
   <div class="summary-cards">
     <div class="card">
-      <div class="c-label">Открытых позиций</div>
+      <div class="c-label" data-i18n="openPositions">Открытых позиций</div>
       <div class="c-value green" id="openCount">0</div>
     </div>
     <div class="card">
-      <div class="c-label">Закрытых позиций</div>
+      <div class="c-label" data-i18n="closedPositions">Закрытых позиций</div>
       <div class="c-value" id="closedCount">0</div>
     </div>
     <div class="card">
-      <div class="c-label">Средняя доходность</div>
+      <div class="c-label" data-i18n="avgYield">Средняя доходность</div>
       <div class="c-value" id="avgYield">0.00%</div>
     </div>
     <div class="card">
-      <div class="c-label">Лучший протокол</div>
+      <div class="c-label" data-i18n="bestProtocol">Лучший протокол</div>
       <div class="c-value green" id="bestProtocol" style="font-size:16px;">—</div>
     </div>
   </div>
 
   <div class="action-bar">
-    <button class="btn btn-primary pulse" onclick="openModal()">＋ Добавить позицию</button>
-    <button class="btn btn-secondary" onclick="exportCSV()">⬇ Экспорт CSV</button>
+    <button class="btn btn-primary pulse" onclick="openModal()" data-i18n="addPosition">＋ Добавить позицию</button>
+    <button class="btn btn-secondary" onclick="exportCSV()" data-i18n="exportCsv">⬇ Экспорт CSV</button>
     <div class="filter-tabs">
-      <div class="tab active" onclick="setFilter('all', this)">ALL</div>
-      <div class="tab" onclick="setFilter('open', this)">OPEN</div>
-      <div class="tab" onclick="setFilter('closed', this)">CLOSED</div>
+      <div class="tab active" onclick="setFilter('all', this)" data-i18n="filterAll">ALL</div>
+      <div class="tab" onclick="setFilter('open', this)" data-i18n="filterOpen">OPEN</div>
+      <div class="tab" onclick="setFilter('closed', this)" data-i18n="filterClosed">CLOSED</div>
     </div>
   </div>
 
@@ -563,16 +630,16 @@
     <table>
       <thead>
         <tr>
-          <th onclick="sortBy('protocol')">Протокол <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('dateOpen')">Дата открытия <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('deposited')">Сумма внесена <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('daysOpen')">Дней в позиции <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('currentValue')">Тек. стоимость <span class="sort-icon">↕</span></th>
-          <th>Обновлено</th>
-          <th onclick="sortBy('profit')">Прибыль <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('returnPct')">Доходность <span class="sort-icon">↕</span></th>
-          <th>APY (оценка)</th>
-          <th>Состояние</th>
+          <th onclick="sortBy('protocol')"><span data-i18n="protocol">Протокол</span> <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('dateOpen')"><span data-i18n="dateOpen">Дата открытия</span> <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('deposited')"><span data-i18n="deposited">Сумма внесена</span> <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('daysOpen')"><span data-i18n="daysInPosition">Дней в позиции</span> <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('currentValue')"><span data-i18n="currentValue">Тек. стоимость</span> <span class="sort-icon">↕</span></th>
+          <th data-i18n="updated">Обновлено</th>
+          <th onclick="sortBy('profit')"><span data-i18n="profit">Прибыль</span> <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('returnPct')"><span data-i18n="yield">Доходность</span> <span class="sort-icon">↕</span></th>
+          <th data-i18n="apyEstimate">APY (оценка)</th>
+          <th data-i18n="status">Состояние</th>
           <th></th>
         </tr>
       </thead>
@@ -580,14 +647,14 @@
     </table>
     <div class="empty-state" id="emptyState" style="display:none;">
       <div class="icon">📊</div>
-      <p>Нет позиций. Добавьте первую!</p>
+      <p data-i18n="noPositions">Нет позиций. Добавьте первую!</p>
     </div>
   </div>
 
 </div>
 
 <!-- Chat widget: replace your_username with your Telegram, or configure Tawk.to below -->
-<a href="https://t.me/your_username" target="_blank" rel="noopener" class="chat-widget-btn" id="chatWidgetBtn" title="Чат" aria-label="Чат">
+<a href="https://t.me/your_username" target="_blank" rel="noopener" class="chat-widget-btn" id="chatWidgetBtn" data-i18n-title="chat" title="Чат" aria-label="Чат">
   💬
 </a>
 
@@ -597,49 +664,169 @@
     <h2 id="modalTitle">Новая <span>позиция</span></h2>
     <div class="form-grid">
       <div class="form-group full">
-        <label>Протокол / DeFi-протокол</label>
+        <label data-i18n="protocolLabel">Протокол / DeFi-протокол</label>
         <input type="text" id="f_protocol" placeholder="Avantis, Convex...">
       </div>
       <div class="form-group">
-        <label>Дата открытия</label>
+        <label data-i18n="dateOpen">Дата открытия</label>
         <input type="date" id="f_dateOpen">
       </div>
       <div class="form-group">
-        <label>Дата закрытия</label>
-        <input type="date" id="f_dateClose" placeholder="Если закрыта">
+        <label data-i18n="dateClose">Дата закрытия</label>
+        <input type="date" id="f_dateClose">
       </div>
       <div class="form-group">
-        <label>Сумма внесена</label>
+        <label data-i18n="deposited">Сумма внесена</label>
         <input type="number" id="f_deposited" placeholder="0">
       </div>
       <div class="form-group">
-        <label>Тек. стоимость</label>
+        <label data-i18n="currentValue">Тек. стоимость</label>
         <input type="number" id="f_currentValue" placeholder="0">
       </div>
       <div class="form-group">
-        <label>Выведено</label>
+        <label data-i18n="withdrawn">Выведено</label>
         <input type="number" id="f_withdrawn" placeholder="0">
       </div>
       <div class="form-group">
-        <label>Состояние</label>
+        <label data-i18n="status">Состояние</label>
         <select id="f_status">
           <option value="open">Open</option>
           <option value="closed">Closed</option>
         </select>
       </div>
       <div class="form-group">
-        <label>Заметка</label>
-        <input type="text" id="f_note" placeholder="Опционально">
+        <label data-i18n="note">Заметка</label>
+        <input type="text" id="f_note">
       </div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="savePosition()">Сохранить</button>
+      <button class="btn btn-secondary" onclick="closeModal()" data-i18n="cancel">Отмена</button>
+      <button class="btn btn-primary" onclick="savePosition()" data-i18n="save">Сохранить</button>
     </div>
   </div>
 </div>
 
 <script>
+// ─── i18n & Theme ────────────────────────────────────────────────────────────
+
+const LANG_KEY = 'defi_lang';
+const THEME_KEY = 'defi_theme';
+
+const t = {
+  ru: {
+    subtitle: 'Учёт позиций · Yield Tracker',
+    totalDeposited: 'Всего вложено',
+    profit: 'Прибыль',
+    currentYield: 'Текущая доходность',
+    openPositions: 'Открытых позиций',
+    closedPositions: 'Закрытых позиций',
+    avgYield: 'Средняя доходность',
+    bestProtocol: 'Лучший протокол',
+    addPosition: '＋ Добавить позицию',
+    exportCsv: '⬇ Экспорт CSV',
+    protocol: 'Протокол',
+    dateOpen: 'Дата открытия',
+    dateClose: 'Дата закрытия',
+    deposited: 'Сумма внесена',
+    daysInPosition: 'Дней в позиции',
+    currentValue: 'Тек. стоимость',
+    updated: 'Обновлено',
+    yield: 'Доходность',
+    apyEstimate: 'APY (оценка)',
+    status: 'Состояние',
+    noPositions: 'Нет позиций. Добавьте первую!',
+    newPosition: 'Новая',
+    editPosition: 'Редактировать',
+    position: 'позиция',
+    protocolLabel: 'Протокол / DeFi-протокол',
+    withdrawn: 'Выведено',
+    note: 'Заметка',
+    cancel: 'Отмена',
+    save: 'Сохранить',
+    enterProtocol: 'Укажите протокол',
+    deleteConfirm: 'Удалить позицию?',
+    edit: 'Редактировать',
+    delete: 'Удалить',
+    chat: 'Чат',
+    filterAll: 'ALL',
+    filterOpen: 'OPEN',
+    filterClosed: 'CLOSED'
+  },
+  en: {
+    subtitle: 'Position tracking · Yield Tracker',
+    totalDeposited: 'Total deposited',
+    profit: 'Profit',
+    currentYield: 'Current yield',
+    openPositions: 'Open positions',
+    closedPositions: 'Closed positions',
+    avgYield: 'Average yield',
+    bestProtocol: 'Best protocol',
+    addPosition: '＋ Add position',
+    exportCsv: '⬇ Export CSV',
+    protocol: 'Protocol',
+    dateOpen: 'Date open',
+    dateClose: 'Date close',
+    deposited: 'Deposited',
+    daysInPosition: 'Days in position',
+    currentValue: 'Current value',
+    updated: 'Updated',
+    yield: 'Yield',
+    apyEstimate: 'APY (est.)',
+    status: 'Status',
+    noPositions: 'No positions. Add the first one!',
+    newPosition: 'New',
+    editPosition: 'Edit',
+    position: 'position',
+    protocolLabel: 'Protocol / DeFi protocol',
+    withdrawn: 'Withdrawn',
+    note: 'Note',
+    cancel: 'Cancel',
+    save: 'Save',
+    enterProtocol: 'Enter protocol',
+    deleteConfirm: 'Delete position?',
+    edit: 'Edit',
+    delete: 'Delete',
+    chat: 'Chat',
+    filterAll: 'ALL',
+    filterOpen: 'OPEN',
+    filterClosed: 'CLOSED'
+  }
+};
+
+let lang = localStorage.getItem(LANG_KEY) || 'ru';
+let theme = localStorage.getItem(THEME_KEY) || 'dark';
+
+function setTheme(val) {
+  theme = val;
+  localStorage.setItem(THEME_KEY, val);
+  document.documentElement.setAttribute('data-theme', val);
+  document.getElementById('themeDark').classList.toggle('active', val === 'dark');
+  document.getElementById('themeLight').classList.toggle('active', val === 'light');
+}
+
+function setLang(val) {
+  lang = val;
+  localStorage.setItem(LANG_KEY, val);
+  document.documentElement.setAttribute('lang', val === 'ru' ? 'ru' : 'en');
+  document.getElementById('langRu').classList.toggle('active', val === 'ru');
+  document.getElementById('langEn').classList.toggle('active', val === 'en');
+  applyLang();
+  render();
+}
+
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[lang] && t[lang][key]) el.textContent = t[lang][key];
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (t[lang] && t[lang][key]) { el.title = t[lang][key]; el.setAttribute('aria-label', t[lang][key]); }
+  });
+  const mt = document.getElementById('modalTitle');
+  if (mt) mt.innerHTML = editId ? t[lang].editPosition + ' <span>' + t[lang].position + '</span>' : t[lang].newPosition + ' <span>' + t[lang].position + '</span>';
+}
+
 // ─── Data ───────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'defi_positions_v1';
@@ -680,12 +867,12 @@ function daysBetween(d1, d2) {
 function toDate(s) {
   if (!s) return '';
   const d = new Date(s);
-  return d.toLocaleDateString('ru-RU');
+  return d.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US');
 }
 
 function fmt(n) {
   if (n == null || isNaN(n)) return '—';
-  return Number(n).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+  return Number(n).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 0 });
 }
 
 function fmtPct(n) { return (n * 100).toFixed(1) + '%'; }
@@ -738,8 +925,8 @@ function render() {
 
     const barPct = Math.min(100, Math.abs(returnPct) * 100 / 0.25 * 100).toFixed(1);
     const statusBadge = p.status === 'open'
-      ? '<span class="badge-status badge-open">Open</span>'
-      : '<span class="badge-status badge-closed">Closed</span>';
+      ? '<span class="badge-status badge-open">' + (lang === 'ru' ? 'Открыта' : 'Open') + '</span>'
+      : '<span class="badge-status badge-closed">' + (lang === 'ru' ? 'Закрыта' : 'Closed') + '</span>';
 
     const tr = document.createElement('tr');
     tr.style.animationDelay = (idx * 0.04) + 's';
@@ -764,8 +951,8 @@ function render() {
       <td>${statusBadge}</td>
       <td>
         <div class="actions">
-          <button class="icon-btn" title="Редактировать" onclick="editPosition('${p.id}')">✏️</button>
-          <button class="icon-btn del" title="Удалить" onclick="deletePosition('${p.id}')">🗑</button>
+          <button class="icon-btn" title="${t[lang].edit}" onclick="editPosition('${p.id}')">✏️</button>
+          <button class="icon-btn del" title="${t[lang].delete}" onclick="deletePosition('${p.id}')">🗑</button>
         </div>
       </td>
     `;
@@ -831,8 +1018,8 @@ function sortBy(field) {
 function openModal(id) {
   editId = id || null;
   document.getElementById('modalTitle').innerHTML = editId
-    ? 'Редактировать <span>позицию</span>'
-    : 'Новая <span>позиция</span>';
+    ? t[lang].editPosition + ' <span>' + t[lang].position + '</span>'
+    : t[lang].newPosition + ' <span>' + t[lang].position + '</span>';
 
   if (editId) {
     const p = positions.find(x => x.id === editId);
@@ -872,7 +1059,7 @@ function closeModalOutside(e) {
 
 function savePosition() {
   const protocol = document.getElementById('f_protocol').value.trim();
-  if (!protocol) { alert('Укажите протокол'); return; }
+  if (!protocol) { alert(t[lang].enterProtocol); return; }
 
   const entry = {
     id: editId || uid(),
@@ -899,7 +1086,7 @@ function savePosition() {
 }
 
 function deletePosition(id) {
-  if (!confirm('Удалить позицию?')) return;
+  if (!confirm(t[lang].deleteConfirm)) return;
   positions = positions.filter(x => x.id !== id);
   save();
   render();
@@ -908,7 +1095,7 @@ function deletePosition(id) {
 // ─── CSV Export ───────────────────────────────────────────────────────────────
 
 function exportCSV() {
-  const cols = ['Протокол','Дата открытия','Дата закрытия','Сумма внесена','Тек. стоимость','Выведено','Прибыль','Доходность %','Дней в позиции','Состояние','Заметка'];
+  const cols = [t[lang].protocol, t[lang].dateOpen, t[lang].dateClose, t[lang].deposited, t[lang].currentValue, t[lang].withdrawn, t[lang].profit, t[lang].yield + ' %', t[lang].daysInPosition, t[lang].status, t[lang].note];
   const rows = [cols.join(';')];
 
   positions.forEach(p => {
@@ -941,6 +1128,13 @@ document.addEventListener('keydown', e => {
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+document.documentElement.setAttribute('data-theme', theme);
+document.documentElement.setAttribute('lang', lang === 'ru' ? 'ru' : 'en');
+document.getElementById('themeDark').classList.toggle('active', theme === 'dark');
+document.getElementById('themeLight').classList.toggle('active', theme === 'light');
+document.getElementById('langRu').classList.toggle('active', lang === 'ru');
+document.getElementById('langEn').classList.toggle('active', lang === 'en');
+applyLang();
 render();
 
 // ─── Chat Widget ──────────────────────────────────────────────────────────────
