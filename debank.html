@@ -122,10 +122,6 @@
       <input type="text" id="addr" placeholder="0x...">
     </div>
     <button class="btn btn-primary" onclick="loadAssets()" id="btnLoad">📡 Загрузить активы</button>
-    <div class="form-group" style="margin:0; margin-top:12px;">
-      <label id="lblApiUrl" style="font-size:9px; opacity:0.8;">API URL (если сайт на GitHub Pages — укажите Vercel)</label>
-      <input type="text" id="apiUrl" placeholder="https://ваш-проект.vercel.app" style="width:100%; max-width:400px;">
-    </div>
   </div>
 
   <div class="summary-cards" id="summaryCards" style="display:none;">
@@ -162,6 +158,8 @@
 </div>
 
 <script>
+// URL API при заходе с GitHub Pages (замените на свой Vercel-адрес если другой)
+const VERCEL_API = 'https://1-ozimovs.vercel.app';
 const LANG_KEY = 'defi_lang'; const THEME_KEY = 'defi_theme';
 const t = {
   ru: {
@@ -170,8 +168,7 @@ const t = {
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01',
-    apiUnavailable: 'API недоступен. Укажите Vercel URL выше (например https://1-ozimovs.vercel.app) или откройте сайт с Vercel.',
-    lblApiUrl: 'API URL (если на GitHub Pages — укажите Vercel)'
+    apiUnavailable: 'API недоступен. Разверните проект на Vercel и откройте сайт по Vercel-адресу.'
   },
   en: {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
@@ -179,8 +176,7 @@ const t = {
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01',
-    apiUnavailable: 'API unavailable. Enter Vercel URL above (e.g. https://1-ozimovs.vercel.app) or open site from Vercel.',
-    lblApiUrl: 'API URL (if on GitHub Pages — enter Vercel)'
+    apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.'
   }
 };
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
@@ -209,8 +205,6 @@ function setLang(v) {
   document.getElementById('loading').textContent = t[lang].loading;
   document.getElementById('empty').textContent = t[lang].empty;
   document.querySelector('.btn-secondary').textContent = t[lang].back;
-  const lblApi = document.getElementById('lblApiUrl');
-  if (lblApi) lblApi.textContent = t[lang].lblApiUrl;
 }
 function fmt(n) {
   if (n == null || isNaN(n)) return '—';
@@ -244,8 +238,8 @@ async function loadAssets() {
   loadingEl.style.display = 'block';
   loadingEl.textContent = t[lang].loading;
 
-  let base = document.getElementById('apiUrl').value.trim();
-  if (!base) base = window.location.origin;
+  let base = window.location.origin;
+  if (window.location.hostname.includes('github.io')) base = VERCEL_API;
   base = base.replace(/\/$/, '');
   const addrLower = addr.toLowerCase();
 
@@ -335,10 +329,6 @@ document.getElementById('themeDark').classList.toggle('active', theme === 'dark'
 document.getElementById('themeLight').classList.toggle('active', theme === 'light');
 document.getElementById('langRu').classList.toggle('active', lang === 'ru');
 document.getElementById('langEn').classList.toggle('active', lang === 'en');
-document.getElementById('apiUrl').value = localStorage.getItem('debank_api_url') || '';
-document.getElementById('apiUrl').addEventListener('input', function() {
-  localStorage.setItem('debank_api_url', this.value.trim());
-});
 setLang(lang);
 </script>
 </body>
