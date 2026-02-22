@@ -472,6 +472,31 @@
 
   .pulse { animation: pulse 2s infinite; }
 
+  /* Chat widget button (shown when Tawk.to not configured) */
+  .chat-widget-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #0a0d12;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0, 229, 160, 0.4);
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .chat-widget-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 24px rgba(0, 229, 160, 0.5);
+  }
+
   /* Responsive */
   @media (max-width: 900px) {
     .form-grid { grid-template-columns: 1fr; }
@@ -560,6 +585,11 @@
   </div>
 
 </div>
+
+<!-- Chat widget: replace your_username with your Telegram, or configure Tawk.to below -->
+<a href="https://t.me/your_username" target="_blank" rel="noopener" class="chat-widget-btn" id="chatWidgetBtn" title="Чат" aria-label="Чат">
+  💬
+</a>
 
 <!-- Modal -->
 <div class="modal-backdrop" id="modalBackdrop" onclick="closeModalOutside(event)">
@@ -912,6 +942,22 @@ document.addEventListener('keydown', e => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 render();
+
+// ─── Chat Widget ──────────────────────────────────────────────────────────────
+// Option A: Tawk.to (free live chat). Sign up at https://www.tawk.to → replace IDs below.
+// When configured, Tawk.to adds its own bubble; we hide our button.
+// Option B: Edit the chat button href above to your Telegram/Discord or remove id to hide.
+(function() {
+  var TAWK_PROPERTY_ID = 'YOUR_PROPERTY_ID';
+  var TAWK_WIDGET_ID = 'YOUR_WIDGET_ID';
+  if (TAWK_PROPERTY_ID === 'YOUR_PROPERTY_ID') return;
+  var btn = document.getElementById('chatWidgetBtn');
+  if (btn) btn.style.display = 'none';
+  var s1 = document.createElement('script'), s2 = document.getElementsByTagName('script')[0];
+  s1.async = true;
+  s1.src = 'https://embed.tawk.to/' + TAWK_PROPERTY_ID + '/' + TAWK_WIDGET_ID;
+  s2.parentNode.insertBefore(s1, s2);
+})();
 </script>
 </body>
 </html>
