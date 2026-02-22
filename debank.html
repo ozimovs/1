@@ -69,9 +69,9 @@
   .card .c-label { font-family: 'Space Mono', monospace; font-size: 10px; text-transform: uppercase; color: var(--muted2); margin-bottom: 8px; }
   .card .c-value { font-size: 24px; font-weight: 800; font-family: 'Space Mono', monospace; color: var(--accent); }
   .table-wrap {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; overflow-y: visible;
   }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
   thead tr { background: var(--surface2); border-bottom: 2px solid var(--border); }
   thead th {
     padding: 14px 16px; text-align: left; font-family: 'Space Mono', monospace;
@@ -146,8 +146,11 @@
         <tr>
           <th id="thToken">Токен</th>
           <th id="thChain">Сеть</th>
+          <th id="thProtocol">Протокол</th>
           <th id="thAmount">Количество</th>
           <th id="thUsd">USD</th>
+          <th id="thOpened">Открыта</th>
+          <th id="thDays">Дней открыта</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -165,7 +168,7 @@ const LANG_KEY = 'defi_lang'; const THEME_KEY = 'defi_theme';
 const t = {
   ru: {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
-    lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thAmount: 'Количество', thUsd: 'USD',
+    lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01',
@@ -174,7 +177,7 @@ const t = {
   },
   en: {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
-    lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thAmount: 'Amount', thUsd: 'USD',
+    lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01',
@@ -203,8 +206,11 @@ function setLang(v) {
   document.getElementById('lblTokens').textContent = t[lang].lblTokens;
   document.getElementById('thToken').textContent = t[lang].thToken;
   document.getElementById('thChain').textContent = t[lang].thChain;
+  document.getElementById('thProtocol').textContent = t[lang].thProtocol;
   document.getElementById('thAmount').textContent = t[lang].thAmount;
   document.getElementById('thUsd').textContent = t[lang].thUsd;
+  document.getElementById('thOpened').textContent = t[lang].thOpened;
+  document.getElementById('thDays').textContent = t[lang].thDays;
   document.getElementById('loading').textContent = t[lang].loading;
   document.getElementById('empty').textContent = t[lang].empty;
   document.querySelector('.btn-secondary').textContent = t[lang].back;
@@ -254,7 +260,7 @@ async function loadAssets() {
   try {
     const [balanceRes, tokenRes] = await Promise.all([
       fetch(`${base}/api/debank-balance?id=${encodeURIComponent(addrLower)}`),
-      fetch(`${base}/api/debank-tokens?id=${encodeURIComponent(addrLower)}&is_all=false`)
+      fetch(`${base}/api/debank-assets?id=${encodeURIComponent(addrLower)}`)
     ]);
 
     if (balanceRes.status === 404 || tokenRes.status === 404) {
@@ -284,6 +290,13 @@ async function loadAssets() {
       errorEl.style.display = 'block';
       return;
     }
+    if (!tokenRes.ok) {
+      const err = tokens?.error || tokens?.message || 'API error';
+      const detail = tokens?.detail || '';
+      errorEl.textContent = err + (detail ? ': ' + detail : '');
+      errorEl.style.display = 'block';
+      return;
+    }
 
     const totalUsd = balance.total_usd_value ?? 0;
     const chainList = balance.chain_list || [];
@@ -305,6 +318,9 @@ async function loadAssets() {
         const usd = (tok.price || 0) * (tok.amount || 0);
         const symbol = tok.optimized_symbol || tok.symbol || tok.name || '?';
         const chain = tok.chain || '—';
+        const protocol = tok.protocol_name || '—';
+        const openedAt = tok.opened_at || '—';
+        const daysOpen = tok.days_open != null ? String(tok.days_open) : '—';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>
@@ -317,15 +333,18 @@ async function loadAssets() {
             </div>
           </td>
           <td>${chain}</td>
+          <td>${protocol}</td>
           <td>${fmt(tok.amount)}</td>
           <td class="usd-value">${fmtUsd(usd)}</td>
+          <td>${openedAt}</td>
+          <td>${daysOpen}</td>
         `;
         tbody.appendChild(tr);
       });
 
     tableEl.style.display = 'block';
     if (tbody.children.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noTokens + '</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noTokens + '</td></tr>';
     }
   } catch (err) {
     loadingEl.style.display = 'none';
