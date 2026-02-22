@@ -30,7 +30,16 @@ module.exports = async function handler(req, res) {
       },
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      return res.status(502).json({
+        error: 'DeBank API returned invalid response',
+        detail: 'Check DEBANK_API_KEY in Vercel settings.',
+      });
+    }
 
     if (!response.ok) {
       return res.status(response.status).json(data);

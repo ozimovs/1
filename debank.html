@@ -278,7 +278,9 @@ async function loadAssets() {
     loadingEl.style.display = 'none';
 
     if (!balanceRes.ok) {
-      errorEl.textContent = balance.error || balance.message || 'API error';
+      const err = balance.error || balance.message || 'API error';
+      const detail = balance.detail || '';
+      errorEl.textContent = err + (detail ? ': ' + detail : '');
       errorEl.style.display = 'block';
       return;
     }
