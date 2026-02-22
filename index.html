@@ -653,6 +653,7 @@
 
   <div class="action-bar">
     <button class="btn btn-primary pulse" onclick="openModal()" data-i18n="addPosition">＋ Добавить позицию</button>
+    <a href="debank.html" class="btn btn-secondary" data-i18n="debankAssets">📡 DeBank активы</a>
     <button class="btn btn-secondary" onclick="exportCSV()" data-i18n="exportCsv">⬇ Экспорт CSV</button>
     <div class="filter-tabs">
       <div class="tab active" onclick="setFilter('all', this)" data-i18n="filterAll">ALL</div>
@@ -790,7 +791,8 @@ const t = {
     loadFromDebank: '📡 Загрузить',
     debankTotal: 'Баланс',
     debankError: 'Ошибка',
-    debankLoading: 'Загрузка...'
+    debankLoading: 'Загрузка...',
+    debankAssets: '📡 DeBank активы'
   },
   en: {
     subtitle: 'Position tracking · Yield Tracker',
@@ -834,7 +836,8 @@ const t = {
     loadFromDebank: '📡 Load',
     debankTotal: 'Balance',
     debankError: 'Error',
-    debankLoading: 'Loading...'
+    debankLoading: 'Loading...',
+    debankAssets: '📡 DeBank assets'
   }
 };
 
