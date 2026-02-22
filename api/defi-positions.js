@@ -3,11 +3,13 @@
  * Использует DeBank /v1/user/all_complex_protocol_list.
  * process.env.DEBANK_API_KEY только на сервере.
  *
- * PortfolioItemObject: name, detail_types, detail.supply_token_list,
- * detail.reward_token_list, detail.borrow_token_list, stats.net_usd_value
+ * opened_at: минимальный time_at по supply_token_list, reward_token_list, borrow_token_list.
+ * Альгоритм: берём time_at из каждого токена в позиции (момент первого появления),
+ * минимум = приблизительная дата открытия позиции. Если time_at нет — null.
  */
 
 const DEBANK_BASE = 'https://pro-openapi.debank.com/v1';
+const SEC_PER_DAY = 86400;
 
 function mapPositionType(name, detailTypes) {
   const n = (name || '').toLowerCase();
@@ -45,6 +47,20 @@ function flattenPositions(protocolList) {
       const rewardList = detail.reward_token_list || [];
       const borrowList = detail.borrow_token_list || [];
 
+      let minTimeAt = null;
+      for (const tok of [...supplyList, ...rewardList, ...borrowList]) {
+        const t = tok.time_at;
+        if (t && typeof t === 'number' && t > 0) {
+          if (minTimeAt == null || t < minTimeAt) minTimeAt = t;
+        }
+      }
+
+      const nowSec = Math.floor(Date.now() / 1000);
+      const openedAt = minTimeAt
+        ? new Date(minTimeAt * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z')
+        : null;
+      const daysOpen = minTimeAt ? Math.floor((nowSec - minTimeAt) / SEC_PER_DAY) : null;
+
       const tokens = [];
       for (const tok of [...supplyList, ...rewardList]) {
         const amount = tok.amount ?? 0;
@@ -79,6 +95,8 @@ function flattenPositions(protocolList) {
         position_name: item.name || '—',
         tokens,
         total_usd: netUsd,
+        opened_at: openedAt,
+        days_open: daysOpen,
       });
     }
   }

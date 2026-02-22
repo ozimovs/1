@@ -138,6 +138,8 @@
           <th id="thPosType">Тип</th>
           <th id="thPosTokens">Токены</th>
           <th id="thPosUsd">Сумма, $</th>
+          <th id="thPosOpened">Открыта</th>
+          <th id="thPosDays">Дней открыта</th>
         </tr>
       </thead>
       <tbody id="positionsTableBody"></tbody>
@@ -189,7 +191,7 @@ const t = {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
-    thPosProtocol: 'Протокол', thPosChain: 'Сеть', thPosType: 'Тип', thPosTokens: 'Токены', thPosUsd: 'Сумма, $',
+    thPosProtocol: 'Протокол', thPosChain: 'Сеть', thPosType: 'Тип', thPosTokens: 'Токены', thPosUsd: 'Сумма, $', thPosOpened: 'Открыта', thPosDays: 'Дней открыта',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций',
@@ -200,7 +202,7 @@ const t = {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
-    thPosProtocol: 'Protocol', thPosChain: 'Chain', thPosType: 'Type', thPosTokens: 'Tokens', thPosUsd: 'Sum, $',
+    thPosProtocol: 'Protocol', thPosChain: 'Chain', thPosType: 'Type', thPosTokens: 'Tokens', thPosUsd: 'Sum, $', thPosOpened: 'Opened', thPosDays: 'Days open',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions',
@@ -248,6 +250,10 @@ function setLang(v) {
   if (thPosTokens) thPosTokens.textContent = t[lang].thPosTokens;
   const thPosUsd = document.getElementById('thPosUsd');
   if (thPosUsd) thPosUsd.textContent = t[lang].thPosUsd;
+  const thPosOpened = document.getElementById('thPosOpened');
+  if (thPosOpened) thPosOpened.textContent = t[lang].thPosOpened;
+  const thPosDays = document.getElementById('thPosDays');
+  if (thPosDays) thPosDays.textContent = t[lang].thPosDays;
   document.getElementById('loading').textContent = t[lang].loading;
   document.getElementById('empty').textContent = t[lang].empty;
   document.querySelector('.btn-secondary').textContent = t[lang].back;
@@ -361,6 +367,8 @@ async function loadAssets() {
         const tokensStr = pos.tokens && pos.tokens.length
           ? pos.tokens.slice(0, 5).map((t) => t.symbol).join(', ')
           : '—';
+        const openedAt = pos.opened_at ? pos.opened_at.slice(0, 10) : '—';
+        const daysOpen = pos.days_open != null ? String(pos.days_open) : '—';
         tr.innerHTML = `
           <td>
             <div class="protocol-cell">
@@ -372,12 +380,14 @@ async function loadAssets() {
           <td>${pos.position_type || '—'}</td>
           <td style="font-size:11px;color:var(--muted2);">${tokensStr}</td>
           <td class="usd-value">${fmtUsd(pos.total_usd)}</td>
+          <td>${openedAt}</td>
+          <td>${daysOpen}</td>
         `;
         positionsTableBody.appendChild(tr);
       });
     } else {
       positionsTableWrap.style.display = 'block';
-      positionsTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
+      positionsTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
 
     summaryEl.style.display = 'grid';
