@@ -122,6 +122,7 @@
       <input type="text" id="addr" placeholder="0x...">
     </div>
     <button class="btn btn-primary" onclick="loadAssets()" id="btnLoad">📡 Загрузить активы</button>
+    <p style="font-size:11px; color:var(--muted2); margin-top:12px; margin-bottom:0;" id="apiHint">При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app</p>
   </div>
 
   <div class="summary-cards" id="summaryCards" style="display:none;">
@@ -168,7 +169,8 @@ const t = {
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01',
-    apiUnavailable: 'API недоступен. Разверните проект на Vercel и откройте сайт по Vercel-адресу.'
+    apiUnavailable: 'API недоступен. Разверните проект на Vercel и откройте сайт по Vercel-адресу.',
+    apiHint: 'При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app'
   },
   en: {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
@@ -176,7 +178,8 @@ const t = {
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01',
-    apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.'
+    apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.',
+    apiHint: 'If load fails: open debank.html?api=https://your-vercel.vercel.app'
   }
 };
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
@@ -205,6 +208,8 @@ function setLang(v) {
   document.getElementById('loading').textContent = t[lang].loading;
   document.getElementById('empty').textContent = t[lang].empty;
   document.querySelector('.btn-secondary').textContent = t[lang].back;
+  const hint = document.getElementById('apiHint');
+  if (hint) hint.textContent = t[lang].apiHint;
 }
 function fmt(n) {
   if (n == null || isNaN(n)) return '—';
@@ -238,8 +243,11 @@ async function loadAssets() {
   loadingEl.style.display = 'block';
   loadingEl.textContent = t[lang].loading;
 
-  let base = window.location.origin;
-  if (window.location.hostname.includes('github.io')) base = VERCEL_API;
+  let base = new URLSearchParams(location.search).get('api');
+  if (!base) {
+    base = window.location.origin;
+    if (window.location.hostname.includes('github.io')) base = VERCEL_API;
+  }
   base = base.replace(/\/$/, '');
   const addrLower = addr.toLowerCase();
 
@@ -319,7 +327,10 @@ async function loadAssets() {
     }
   } catch (err) {
     loadingEl.style.display = 'none';
-    errorEl.textContent = 'Error: ' + err.message;
+    const errMsg = lang === 'ru'
+      ? 'Нет связи с API. Узнайте свой Vercel URL в dashboard, затем откройте: debank.html?api=https://ваш-проект.vercel.app'
+      : 'No connection to API. Get your Vercel URL from dashboard, then open: debank.html?api=https://your-project.vercel.app';
+    errorEl.innerHTML = errMsg;
     errorEl.style.display = 'block';
   }
 }
