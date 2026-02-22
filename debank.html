@@ -165,14 +165,16 @@ const t = {
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thAmount: 'Количество', thUsd: 'USD',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
-    noTokens: 'Нет токенов с балансом > $0.01'
+    noTokens: 'Нет токенов с балансом > $0.01',
+    apiUnavailable: 'API недоступен. Сайт на GitHub Pages не поддерживает API. Разверните проект на Vercel (vercel.com) для работы с DeBank.'
   },
   en: {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thAmount: 'Amount', thUsd: 'USD',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
-    noTokens: 'No tokens with balance > $0.01'
+    noTokens: 'No tokens with balance > $0.01',
+    apiUnavailable: 'API unavailable. GitHub Pages does not support server-side API. Deploy to Vercel (vercel.com) to use DeBank.'
   }
 };
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
@@ -235,15 +237,31 @@ async function loadAssets() {
   loadingEl.textContent = t[lang].loading;
 
   const base = window.location.origin;
+  const addrLower = addr.toLowerCase();
 
   try {
     const [balanceRes, tokenRes] = await Promise.all([
-      fetch(`${base}/api/debank?path=user/total_balance&id=${encodeURIComponent(addr)}`),
-      fetch(`${base}/api/debank?path=user/all_token_list&id=${encodeURIComponent(addr)}&is_all=false`)
+      fetch(`${base}/api/debank?path=user/total_balance&id=${encodeURIComponent(addrLower)}`),
+      fetch(`${base}/api/debank?path=user/all_token_list&id=${encodeURIComponent(addrLower)}&is_all=false`)
     ]);
 
-    const balance = await balanceRes.json();
-    const tokens = await tokenRes.json();
+    if (balanceRes.status === 404 || tokenRes.status === 404) {
+      loadingEl.style.display = 'none';
+      errorEl.textContent = t[lang].apiUnavailable;
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    let balance, tokens;
+    try {
+      balance = await balanceRes.json();
+      tokens = await tokenRes.json();
+    } catch (parseErr) {
+      loadingEl.style.display = 'none';
+      errorEl.textContent = t[lang].apiUnavailable;
+      errorEl.style.display = 'block';
+      return;
+    }
 
     loadingEl.style.display = 'none';
 
