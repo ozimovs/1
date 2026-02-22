@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/debank.js": {
+      "memory": 128
+    }
+  }
+}
