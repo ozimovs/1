@@ -1162,7 +1162,7 @@ async function loadFromDebank() {
 
   try {
     const base = window.location.origin;
-    const res = await fetch(`${base}/api/debank/wallet?addr=${encodeURIComponent(addr)}`);
+    const res = await fetch(`${base}/api/debank-balance?id=${encodeURIComponent(addr)}`);
     const data = await res.json();
 
     if (!res.ok) {
