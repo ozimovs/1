@@ -1,7 +1,6 @@
 {
   "functions": {
-    "api/debank.js": {
-      "memory": 128
-    }
+    "api/debank.js": { "memory": 128 },
+    "api/debank/wallet.js": { "memory": 128 }
   }
 }

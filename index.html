@@ -551,6 +551,32 @@
   }
   .toggle-btn.theme-btn { padding: 6px 10px; font-size: 14px; }
 
+  /* DeBank load */
+  .debank-load {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .debank-load input {
+    width: 320px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+  }
+  .debank-load .btn { flex-shrink: 0; }
+  .debank-result {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+  }
+  .debank-result.loading { color: var(--muted2); }
+  .debank-result.error { color: var(--danger); }
+  .debank-result .total { font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+
   /* Responsive */
   @media (max-width: 900px) {
     .form-grid { grid-template-columns: 1fr; }
@@ -614,6 +640,15 @@
       <div class="c-label" data-i18n="bestProtocol">Лучший протокол</div>
       <div class="c-value green" id="bestProtocol" style="font-size:16px;">—</div>
     </div>
+  </div>
+
+  <div class="debank-load" style="margin-bottom:20px;flex-wrap:wrap;">
+    <div class="form-group" style="margin:0;">
+      <label data-i18n="debankWallet">Кошелёк DeBank</label>
+      <input type="text" id="debankAddr" placeholder="0x...">
+    </div>
+    <button class="btn btn-secondary" onclick="loadFromDebank()" data-i18n="loadFromDebank">📡 Загрузить</button>
+    <div class="debank-result" id="debankResult" style="display:none;flex-basis:100%;"></div>
   </div>
 
   <div class="action-bar">
@@ -750,7 +785,12 @@ const t = {
     chat: 'Чат',
     filterAll: 'ALL',
     filterOpen: 'OPEN',
-    filterClosed: 'CLOSED'
+    filterClosed: 'CLOSED',
+    debankWallet: 'Кошелёк DeBank',
+    loadFromDebank: '📡 Загрузить',
+    debankTotal: 'Баланс',
+    debankError: 'Ошибка',
+    debankLoading: 'Загрузка...'
   },
   en: {
     subtitle: 'Position tracking · Yield Tracker',
@@ -789,7 +829,12 @@ const t = {
     chat: 'Chat',
     filterAll: 'ALL',
     filterOpen: 'OPEN',
-    filterClosed: 'CLOSED'
+    filterClosed: 'CLOSED',
+    debankWallet: 'DeBank Wallet',
+    loadFromDebank: '📡 Load',
+    debankTotal: 'Balance',
+    debankError: 'Error',
+    debankLoading: 'Loading...'
   }
 };
 
@@ -1090,6 +1135,53 @@ function deletePosition(id) {
   positions = positions.filter(x => x.id !== id);
   save();
   render();
+}
+
+// ─── DeBank ───────────────────────────────────────────────────────────────────
+
+async function loadFromDebank() {
+  const addr = document.getElementById('debankAddr').value.trim();
+  const resultEl = document.getElementById('debankResult');
+
+  if (!addr || !/^0x[a-fA-F0-9]{40}$/.test(addr)) {
+    resultEl.style.display = 'block';
+    resultEl.className = 'debank-result error';
+    resultEl.textContent = lang === 'ru' ? 'Введите валидный адрес (0x + 40 символов)' : 'Enter valid address (0x + 40 chars)';
+    return;
+  }
+
+  resultEl.style.display = 'block';
+  resultEl.className = 'debank-result loading';
+  resultEl.textContent = t[lang].debankLoading;
+
+  try {
+    const base = window.location.origin;
+    const res = await fetch(`${base}/api/debank/wallet?addr=${encodeURIComponent(addr)}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      resultEl.className = 'debank-result error';
+      resultEl.innerHTML = (data.error || data.message || 'Error') + (data.detail ? ': ' + data.detail : '');
+      return;
+    }
+
+    const total = data.total_usd_value != null ? data.total_usd_value : 0;
+    const fmt = (n) => Number(n).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 2 });
+
+    let html = '<div class="total">' + t[lang].debankTotal + ': $' + fmt(total) + '</div>';
+    if (data.chain_list && data.chain_list.length > 0) {
+      const chains = data.chain_list.filter(c => c.usd_value > 0).slice(0, 5);
+      if (chains.length) {
+        html += '<div style="margin-top:8px;color:var(--muted2);font-size:11px;">' +
+          chains.map(c => c.name + ': $' + fmt(c.usd_value)).join(' · ') + '</div>';
+      }
+    }
+    resultEl.className = 'debank-result';
+    resultEl.innerHTML = html;
+  } catch (err) {
+    resultEl.className = 'debank-result error';
+    resultEl.textContent = t[lang].debankError + ': ' + err.message;
+  }
 }
 
 // ─── CSV Export ───────────────────────────────────────────────────────────────
