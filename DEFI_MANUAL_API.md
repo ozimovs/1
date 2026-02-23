@@ -104,12 +104,19 @@ wallet:{wallet}:position:{chain}:{protocol_id}:{position_type}:{position_key}
 
 ---
 
-## Изменённые файлы
+## Имена полей даты
+
+| Этап | Имя поля | Пример |
+|------|----------|--------|
+| Фронт → POST | `opened_at_manual` | `"2025-02-15"` (YYYY-MM-DD) |
+| Redis-объект | `opened_at_manual` | `"2025-02-15T00:00:00.000Z"` |
+| Ответ /api/defi-positions | `opened_at_effective` | `"2025-02-15T00:00:00.000Z"` |
+| UI колонка «Открыта» | `opened_at_effective` через `fmtDate()` | `"2025-02-15"` |
+
+## Изменённые файлы (дата)
 
 | Файл | Изменения |
 |------|-----------|
-| `api/defi-position-manual.js` | Логирование POST и Redis save |
-| `api/defi-positions.js` | Логирование первого lookup, Cache-Control no-store |
-| `debank.html` | Обработка ошибок JSON, cache: no-store для fetch |
-| `lib/redis.js` | Поддержка REDIS_URL и KV_REST_API |
-| `lib/position-key.js` | Общий формат ключа |
+| `api/defi-position-manual.js` | Приём `opened_at_manual`/`openedAtManual`/`openedAt`, явная нормализация, SAVE_MANUAL_POSITION лог, read-back |
+| `api/defi-positions.js` | `opened_at_manual`/`openedAtManual` из manual, POSITION_WITH_MANUAL лог |
+| `debank.html` | `fmtDate()` для безопасного форматирования, колонка «Открыта» только из `opened_at_effective` |

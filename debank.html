@@ -329,6 +329,11 @@ function fmt(n) {
   if (n == null || isNaN(n)) return '—';
   return Number(n).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 4, minimumFractionDigits: 0 });
 }
+function fmtDate(v) {
+  if (v == null) return '—';
+  const s = typeof v === 'string' ? v : (v.toISOString ? v.toISOString() : String(v));
+  return (s && s.length >= 10) ? s.slice(0, 10) : '—';
+}
 function fmtUsd(n) {
   if (n == null || isNaN(n) || n < 0.01) return '$0';
   return '$' + Number(n).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
@@ -361,7 +366,7 @@ function bindPositionEdits(fmtUsd) {
     tr.cells[5].textContent = merged.initial_deposit_usd != null ? fmtUsd(merged.initial_deposit_usd) : '—';
     tr.cells[6].textContent = showMetrics && merged.profit_usd != null ? fmtUsd(merged.profit_usd) : '—';
     tr.cells[7].textContent = showMetrics && merged.apy_percent != null ? merged.apy_percent.toFixed(2) + '%' : '—';
-    tr.cells[8].innerHTML = merged.opened_at_effective ? merged.opened_at_effective.slice(0, 10) + (merged.has_manual_opened_at ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : '') : '—';
+    tr.cells[8].innerHTML = fmtDate(merged.opened_at_effective) + (merged.has_manual_opened_at ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : '');
     tr.cells[9].textContent = showMetrics && merged.days_open != null ? String(merged.days_open) : '—';
   }
 
@@ -564,7 +569,7 @@ async function loadAssets() {
         const tokensStr = pos.tokens && pos.tokens.length
           ? pos.tokens.slice(0, 5).map((t) => t.symbol).join(', ')
           : '—';
-        const openedAt = pos.opened_at_effective ? pos.opened_at_effective.slice(0, 10) : '—';
+        const openedAt = fmtDate(pos.opened_at_effective);
         const hasManual = pos.has_manual_opened_at;
         const showMetrics = pos.opened_at_effective && pos.initial_deposit_usd != null;
         const daysOpen = showMetrics && pos.days_open != null ? String(pos.days_open) : '—';

@@ -38,15 +38,20 @@ module.exports = async function handler(req, res) {
 
   const kvKey = makePositionKvKey(wallet, chain, protocolId, positionType, positionKey);
 
-  // DEBUG: log incoming POST
-  console.log('[defi-position-manual] POST received:', { wallet, chain, protocol_id: protocolId, position_type: positionType, position_key: positionKey, opened_at_manual: body.opened_at_manual, initial_deposit_usd: body.initial_deposit_usd });
-
-  let openedAtManual = body.opened_at_manual;
+  let openedAtManual = body.opened_at_manual ?? body.openedAtManual ?? body.openedAt ?? null;
+  if (openedAtManual !== null && openedAtManual !== undefined) {
+    const s = String(openedAtManual).trim();
+    openedAtManual = s === '' ? null : s;
+  } else {
+    openedAtManual = null;
+  }
   if (openedAtManual) {
-    if (typeof openedAtManual === 'string' && !openedAtManual.endsWith('Z') && !openedAtManual.includes('+')) {
+    if (!openedAtManual.endsWith('Z') && !openedAtManual.includes('+')) {
       openedAtManual = openedAtManual.includes('T') ? openedAtManual + 'Z' : openedAtManual + 'T00:00:00.000Z';
     }
   }
+
+  console.log('SAVE_MANUAL_POSITION', { wallet, protocolId, positionKey, openedAtManual, initialDepositUsd: body.initial_deposit_usd });
 
   const initialDepositUsd = body.initial_deposit_usd;
   const numInitial = initialDepositUsd != null ? Number(initialDepositUsd) : null;
@@ -68,7 +73,8 @@ module.exports = async function handler(req, res) {
     const existing = await redisGet(kvKey);
     if (existing && existing.created_at) record.created_at = existing.created_at;
     await redisSet(kvKey, record);
-    console.log('[defi-position-manual] Redis saved:', { kvKey, record });
+    const verify = await redisGet(kvKey);
+    console.log('[defi-position-manual] Redis saved, read-back:', { kvKey, record, verify });
     return res.status(200).json(record);
   } catch (err) {
     console.error('[defi-position-manual] Redis error:', err.message);

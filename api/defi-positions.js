@@ -105,10 +105,10 @@ function flattenPositions(protocolList) {
 }
 
 function computeDerived(pos, manual, wallet) {
-  const openedAtManual = manual?.opened_at_manual || null;
+  const openedAtManual = (manual?.opened_at_manual ?? manual?.openedAtManual ?? null) || null;
   const initialDepositUsd = manual?.initial_deposit_usd ?? null;
-  const hasManualOpenedAt = openedAtManual != null;
-  const effective = openedAtManual || null;
+  const hasManualOpenedAt = openedAtManual != null && String(openedAtManual).trim() !== '';
+  const effective = (openedAtManual && String(openedAtManual).trim()) ? openedAtManual.trim() : null;
 
   let daysOpen = null;
   let profitUsd = null;
@@ -191,16 +191,14 @@ module.exports = async function handler(req, res) {
     const rawPositions = flattenPositions(protocolList);
 
     const positions = [];
-    let debuggedFirst = false;
     for (const p of rawPositions) {
       try {
         const manual = await getManualOverride(id, p);
-        if (!debuggedFirst) {
-          const k = makePositionKvKey(id, p.chain, p.protocol_id, p.position_type, p.position_key);
-          console.log('[defi-positions] First position lookup:', { key: k, hasManual: !!manual, manual });
-          debuggedFirst = true;
+        const derived = computeDerived(p, manual, id);
+        if (manual) {
+          console.log('POSITION_WITH_MANUAL', { protocolId: p.protocol_id, positionKey: p.position_key, openedAtManual: manual?.opened_at_manual, openedAtEffective: derived.opened_at_effective });
         }
-        positions.push(computeDerived(p, manual, id));
+        positions.push(derived);
       } catch (e) {
         positions.push(computeDerived(p, null, id));
       }
