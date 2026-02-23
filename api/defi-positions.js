@@ -1,11 +1,6 @@
 /**
- * Серверный endpoint: DeFi позиции по протоколам.
- * Использует DeBank /v1/user/all_complex_protocol_list.
- * process.env.DEBANK_API_KEY только на сервере.
- *
- * opened_at: минимальный time_at по supply_token_list, reward_token_list, borrow_token_list.
- * Альгоритм: берём time_at из каждого токена в позиции (момент первого появления),
- * минимум = приблизительная дата открытия позиции. Если time_at нет — null.
+ * DeFi позиции по кошельку. DeBank all_complex_protocol_list + ручные поправки из KV.
+ * position_key: pool.id || position_index || 'default'
  */
 
 const DEBANK_BASE = 'https://pro-openapi.debank.com/v1';
@@ -25,6 +20,11 @@ function mapPositionType(name, detailTypes) {
   if (n.includes('deposit') || n === 'yield') return 'lending';
   if (n.includes('vest') || n === 'rewards') return 'stake';
   return n || 'other';
+}
+
+function makePositionKey(item) {
+  const pk = item.pool?.id || item.position_index || 'default';
+  return String(pk).replace(/[^a-zA-Z0-9:_.-]/g, '_');
 }
 
 function flattenPositions(protocolList) {
@@ -55,11 +55,9 @@ function flattenPositions(protocolList) {
         }
       }
 
-      const nowSec = Math.floor(Date.now() / 1000);
-      const openedAt = minTimeAt
+      const openedAtAuto = minTimeAt
         ? new Date(minTimeAt * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z')
         : null;
-      const daysOpen = minTimeAt ? Math.floor((nowSec - minTimeAt) / SEC_PER_DAY) : null;
 
       const tokens = [];
       for (const tok of [...supplyList, ...rewardList]) {
@@ -85,23 +83,76 @@ function flattenPositions(protocolList) {
       }
 
       const positionType = mapPositionType(item.name, item.detail_types);
+      const positionKey = makePositionKey(item);
 
       positions.push({
+        wallet: null,
+        chain,
         protocol_id: protocolId,
         protocol_name: protocolName,
         protocol_logo_url: logoUrl,
-        chain,
         position_type: positionType,
         position_name: item.name || '—',
+        position_key: positionKey,
         tokens,
         total_usd: netUsd,
-        opened_at: openedAt,
-        days_open: daysOpen,
+        opened_at_auto: openedAtAuto,
       });
     }
   }
 
   return positions.sort((a, b) => b.total_usd - a.total_usd);
+}
+
+function computeDerived(pos, manual, wallet) {
+  const openedAtManual = manual?.opened_at_manual || null;
+  const initialDepositUsd = manual?.initial_deposit_usd ?? null;
+  const effective = openedAtManual || pos.opened_at_auto;
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  let daysOpen = null;
+  let profitUsd = null;
+  let apyPercent = null;
+
+  if (effective) {
+    const effectiveSec = Math.floor(new Date(effective).getTime() / 1000);
+    daysOpen = Math.floor((nowSec - effectiveSec) / SEC_PER_DAY);
+  }
+
+  if (initialDepositUsd != null && initialDepositUsd > 0) {
+    profitUsd = pos.total_usd - initialDepositUsd;
+    if (daysOpen != null && daysOpen > 0) {
+      const years = daysOpen / 365;
+      apyPercent = ((pos.total_usd / initialDepositUsd) ** (1 / years) - 1) * 100;
+    }
+  }
+
+  return {
+    ...pos,
+    wallet: wallet || pos.wallet,
+    opened_at_manual: openedAtManual,
+    opened_at_effective: effective,
+    days_open: daysOpen,
+    initial_deposit_usd: initialDepositUsd,
+    profit_usd: profitUsd,
+    apy_percent: apyPercent,
+  };
+}
+
+function makeKvKey(wallet, chain, protocolId, positionType, positionKey) {
+  const clean = (s) => (s || '').replace(/[^a-zA-Z0-9:_.-]/g, '_');
+  const id = [chain, protocolId, positionType, positionKey || 'default'].map(clean).join(':');
+  return `wallet:${wallet}:position:${id}`;
+}
+
+async function getManualOverride(wallet, pos) {
+  const { redisGet } = require('../lib/redis');
+  try {
+    const k = makeKvKey(wallet, pos.chain, pos.protocol_id, pos.position_type, pos.position_key);
+    return await redisGet(k);
+  } catch {
+    return null;
+  }
 }
 
 module.exports = async function handler(req, res) {
@@ -142,7 +193,13 @@ module.exports = async function handler(req, res) {
     if (!response.ok) return res.status(response.status).json(data);
 
     const protocolList = Array.isArray(data) ? data : [];
-    const positions = flattenPositions(protocolList);
+    const rawPositions = flattenPositions(protocolList);
+
+    const positions = [];
+    for (const p of rawPositions) {
+      const manual = await getManualOverride(id, p);
+      positions.push(computeDerived(p, manual, id));
+    }
 
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
     return res.status(200).json(positions);

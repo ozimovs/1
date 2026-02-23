@@ -71,7 +71,7 @@
   .table-wrap {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; overflow-y: visible;
   }
-  table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+  table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 13px; }
   thead tr { background: var(--surface2); border-bottom: 2px solid var(--border); }
   thead th {
     padding: 14px 16px; text-align: left; font-family: 'Space Mono', monospace;
@@ -99,6 +99,9 @@
   .section-title { font-weight: 700; color: var(--text); }
   .protocol-cell { display: flex; align-items: center; gap: 10px; }
   .protocol-cell img { width: 24px; height: 24px; border-radius: 6px; }
+  .editable-cell { cursor: pointer; min-width: 90px; }
+  .editable-cell:hover { background: rgba(0,229,160,0.06); border-radius: 4px; }
+  .editable-cell input { width: 100%; max-width: 110px; padding: 4px 8px; font: inherit; background: var(--surface2); border: 1px solid var(--accent); border-radius: 4px; color: var(--text); }
 </style>
 </head>
 <body>
@@ -138,8 +141,11 @@
           <th id="thPosType">Тип</th>
           <th id="thPosTokens">Токены</th>
           <th id="thPosUsd">Сумма, $</th>
+          <th id="thPosInitial">Нач. сумма, $</th>
+          <th id="thPosProfit">Прибыль, $</th>
+          <th id="thPosApy">APY %</th>
           <th id="thPosOpened">Открыта</th>
-          <th id="thPosDays">Дней открыта</th>
+          <th id="thPosDays">Дней</th>
         </tr>
       </thead>
       <tbody id="positionsTableBody"></tbody>
@@ -191,7 +197,7 @@ const t = {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
-    thPosProtocol: 'Протокол', thPosChain: 'Сеть', thPosType: 'Тип', thPosTokens: 'Токены', thPosUsd: 'Сумма, $', thPosOpened: 'Открыта', thPosDays: 'Дней открыта',
+    thPosProtocol: 'Протокол', thPosChain: 'Сеть', thPosType: 'Тип', thPosTokens: 'Токены', thPosUsd: 'Сумма, $', thPosInitial: 'Нач. сумма, $', thPosProfit: 'Прибыль, $', thPosApy: 'APY %', thPosOpened: 'Открыта', thPosDays: 'Дней',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций',
@@ -202,7 +208,7 @@ const t = {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
-    thPosProtocol: 'Protocol', thPosChain: 'Chain', thPosType: 'Type', thPosTokens: 'Tokens', thPosUsd: 'Sum, $', thPosOpened: 'Opened', thPosDays: 'Days open',
+    thPosProtocol: 'Protocol', thPosChain: 'Chain', thPosType: 'Type', thPosTokens: 'Tokens', thPosUsd: 'Sum, $', thPosInitial: 'Initial, $', thPosProfit: 'Profit, $', thPosApy: 'APY %', thPosOpened: 'Opened', thPosDays: 'Days',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions',
@@ -254,6 +260,10 @@ function setLang(v) {
   if (thPosOpened) thPosOpened.textContent = t[lang].thPosOpened;
   const thPosDays = document.getElementById('thPosDays');
   if (thPosDays) thPosDays.textContent = t[lang].thPosDays;
+  ['thPosInitial','thPosProfit','thPosApy'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t[lang][id];
+  });
   document.getElementById('loading').textContent = t[lang].loading;
   document.getElementById('empty').textContent = t[lang].empty;
   document.querySelector('.btn-secondary').textContent = t[lang].back;
@@ -267,6 +277,54 @@ function fmt(n) {
 function fmtUsd(n) {
   if (n == null || isNaN(n) || n < 0.01) return '$0';
   return '$' + Number(n).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+}
+
+function bindPositionEdits(fmtUsd, onSave) {
+  const wrap = document.getElementById('positionsTableBody');
+  const tableWrap = document.getElementById('positionsTableWrap');
+  if (!wrap || !tableWrap || wrap.dataset.editBound) return;
+  wrap.dataset.editBound = '1';
+  wrap.addEventListener('click', (e) => {
+    const cell = e.target.closest('.editable-cell');
+    if (!cell || cell.querySelector('input')) return;
+    const tr = cell.closest('tr');
+    const base = tableWrap.dataset.base || window.location.origin;
+    const wallet = tableWrap.dataset.wallet || '';
+    const pos = JSON.parse(tr.dataset.pos || '{}');
+    const isDate = cell.classList.contains('pos-opened');
+    const isInitial = cell.classList.contains('pos-initial');
+    if (!isDate && !isInitial) return;
+    const current = isDate ? (pos.opened_at_effective || '').slice(0, 10) : (pos.initial_deposit_usd != null ? String(pos.initial_deposit_usd) : '');
+    const inp = document.createElement('input');
+    inp.type = isDate ? 'date' : 'number';
+    inp.step = isDate ? null : '0.01';
+    inp.value = current;
+    cell.textContent = '';
+    cell.appendChild(inp);
+    inp.focus();
+    function finish() {
+      const val = inp.value.trim();
+      if (inp.parentNode) cell.removeChild(inp);
+      cell.textContent = isDate ? (val || '—') : (val ? fmtUsd(Number(val)) : '—');
+      if (!val && !isDate) cell.textContent = '—';
+      const payload = {
+        wallet,
+        chain: pos.chain,
+        protocol_id: pos.protocol_id,
+        position_type: pos.position_type,
+        position_key: pos.position_key || 'default',
+        opened_at_manual: isDate ? (val || null) : ((pos.opened_at_effective || '').slice(0, 10) || null),
+        initial_deposit_usd: isInitial && val ? Number(val) : (pos.initial_deposit_usd ?? null)
+      };
+      fetch(base + '/api/defi-position-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(r => r.json()).then(() => onSave()).catch(() => {});
+    }
+    inp.addEventListener('blur', finish);
+    inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') finish(); });
+  });
 }
 
 async function loadAssets() {
@@ -364,11 +422,16 @@ async function loadAssets() {
       positionsTableWrap.style.display = 'block';
       positionsList.forEach((pos) => {
         const tr = document.createElement('tr');
+        tr.dataset.pos = JSON.stringify(pos);
+        tr.dataset.wallet = addrLower;
         const tokensStr = pos.tokens && pos.tokens.length
           ? pos.tokens.slice(0, 5).map((t) => t.symbol).join(', ')
           : '—';
-        const openedAt = pos.opened_at ? pos.opened_at.slice(0, 10) : '—';
+        const openedAt = pos.opened_at_effective ? pos.opened_at_effective.slice(0, 10) : '—';
         const daysOpen = pos.days_open != null ? String(pos.days_open) : '—';
+        const initialVal = pos.initial_deposit_usd != null ? pos.initial_deposit_usd : '';
+        const profitVal = pos.profit_usd != null ? fmtUsd(pos.profit_usd) : '—';
+        const apyVal = pos.apy_percent != null ? pos.apy_percent.toFixed(2) + '%' : '—';
         tr.innerHTML = `
           <td>
             <div class="protocol-cell">
@@ -380,14 +443,20 @@ async function loadAssets() {
           <td>${pos.position_type || '—'}</td>
           <td style="font-size:11px;color:var(--muted2);">${tokensStr}</td>
           <td class="usd-value">${fmtUsd(pos.total_usd)}</td>
-          <td>${openedAt}</td>
+          <td class="editable-cell pos-initial" title="Клик для редактирования">${initialVal !== '' ? fmtUsd(initialVal) : '—'}</td>
+          <td>${profitVal}</td>
+          <td>${apyVal}</td>
+          <td class="editable-cell pos-opened" title="Клик для редактирования">${openedAt}</td>
           <td>${daysOpen}</td>
         `;
         positionsTableBody.appendChild(tr);
       });
+      document.getElementById('positionsTableWrap').dataset.base = base;
+      document.getElementById('positionsTableWrap').dataset.wallet = addrLower;
+      bindPositionEdits(fmtUsd, loadAssets);
     } else {
       positionsTableWrap.style.display = 'block';
-      positionsTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
+      positionsTableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
 
     summaryEl.style.display = 'grid';

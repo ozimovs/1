@@ -1,0 +1,82 @@
+/**
+ * POST /api/defi-position-manual
+ * Сохраняет ручные значения для DeFi позиции в Redis (REDIS_URL).
+ * Ключ: wallet:{wallet}:position:{positionId}
+ */
+
+const { redisGet, redisSet } = require('../lib/redis');
+
+function makePositionId(chain, protocolId, positionType, positionKey) {
+  const clean = (s) => (s || '').replace(/[^a-zA-Z0-9:_.-]/g, '_');
+  return [chain, protocolId, positionType, positionKey].map(clean).join(':');
+}
+
+function makeKvKey(wallet) {
+  return `wallet:${wallet.toLowerCase()}`;
+}
+
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  let body;
+  try {
+    const raw = req.body;
+    if (typeof raw === 'string') body = JSON.parse(raw);
+    else if (Buffer.isBuffer(raw)) body = JSON.parse(raw.toString());
+    else body = raw || {};
+  } catch {
+    return res.status(400).json({ error: 'Invalid JSON body' });
+  }
+
+  const wallet = (body.wallet || '').trim().toLowerCase();
+  const chain = (body.chain || '').trim();
+  const protocolId = (body.protocol_id || '').trim();
+  const positionType = (body.position_type || '').trim();
+  const positionKey = (body.position_key || 'default').trim();
+
+  if (!wallet || !/^0x[a-f0-9]{40}$/.test(wallet)) {
+    return res.status(400).json({ error: 'Valid wallet address required' });
+  }
+  if (!chain || !protocolId || !positionType) {
+    return res.status(400).json({ error: 'chain, protocol_id, position_type required' });
+  }
+
+  const positionId = makePositionId(chain, protocolId, positionType, positionKey);
+  const kvKey = `${makeKvKey(wallet)}:position:${positionId}`;
+
+  let openedAtManual = body.opened_at_manual;
+  if (openedAtManual) {
+    if (typeof openedAtManual === 'string' && !openedAtManual.endsWith('Z') && !openedAtManual.includes('+')) {
+      openedAtManual = openedAtManual.includes('T') ? openedAtManual + 'Z' : openedAtManual + 'T00:00:00.000Z';
+    }
+  }
+
+  const initialDepositUsd = body.initial_deposit_usd;
+  const numInitial = initialDepositUsd != null ? Number(initialDepositUsd) : null;
+
+  const now = new Date().toISOString();
+  const record = {
+    wallet,
+    chain,
+    protocol_id: protocolId,
+    position_type: positionType,
+    position_key: positionKey,
+    opened_at_manual: openedAtManual || null,
+    initial_deposit_usd: numInitial != null && !isNaN(numInitial) ? numInitial : null,
+    created_at: now,
+    updated_at: now,
+  };
+
+  try {
+    const existing = await redisGet(kvKey);
+    if (existing && existing.created_at) record.created_at = existing.created_at;
+    await redisSet(kvKey, record);
+    return res.status(200).json(record);
+  } catch (err) {
+    return res.status(500).json({ error: 'Redis storage unavailable', detail: err.message });
+  }
+};
