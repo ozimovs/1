@@ -302,7 +302,10 @@ function bindPositionEdits(fmtUsd, onSave) {
     cell.textContent = '';
     cell.appendChild(inp);
     inp.focus();
+    let done = false;
     function finish() {
+      if (done) return;
+      done = true;
       const val = inp.value.trim();
       if (inp.parentNode) cell.removeChild(inp);
       cell.textContent = isDate ? (val || '—') : (val ? fmtUsd(Number(val)) : '—');
@@ -314,13 +317,15 @@ function bindPositionEdits(fmtUsd, onSave) {
         position_type: pos.position_type,
         position_key: pos.position_key || 'default',
         opened_at_manual: isDate ? (val || null) : ((pos.opened_at_effective || '').slice(0, 10) || null),
-        initial_deposit_usd: isInitial && val ? Number(val) : (pos.initial_deposit_usd ?? null)
+        initial_deposit_usd: isInitial ? (val ? Number(val) : null) : (pos.initial_deposit_usd ?? null)
       };
       fetch(base + '/api/defi-position-manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).then(r => r.json()).then(() => onSave()).catch(() => {});
+      }).then(r => r.ok ? r.json() : Promise.reject(new Error('Save failed')))
+        .then(() => onSave())
+        .catch(() => {});
     }
     inp.addEventListener('blur', finish);
     inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') finish(); });
@@ -428,10 +433,13 @@ async function loadAssets() {
           ? pos.tokens.slice(0, 5).map((t) => t.symbol).join(', ')
           : '—';
         const openedAt = pos.opened_at_effective ? pos.opened_at_effective.slice(0, 10) : '—';
-        const daysOpen = pos.days_open != null ? String(pos.days_open) : '—';
+        const hasManual = pos.has_manual_opened_at;
+        const showMetrics = pos.opened_at_effective && pos.initial_deposit_usd != null;
+        const daysOpen = showMetrics && pos.days_open != null ? String(pos.days_open) : '—';
         const initialVal = pos.initial_deposit_usd != null ? pos.initial_deposit_usd : '';
-        const profitVal = pos.profit_usd != null ? fmtUsd(pos.profit_usd) : '—';
-        const apyVal = pos.apy_percent != null ? pos.apy_percent.toFixed(2) + '%' : '—';
+        const initialDisplay = pos.initial_deposit_usd != null ? fmtUsd(pos.initial_deposit_usd) : '—';
+        const profitVal = showMetrics && pos.profit_usd != null ? fmtUsd(pos.profit_usd) : '—';
+        const apyVal = showMetrics && pos.apy_percent != null ? pos.apy_percent.toFixed(2) + '%' : '—';
         tr.innerHTML = `
           <td>
             <div class="protocol-cell">
@@ -443,10 +451,10 @@ async function loadAssets() {
           <td>${pos.position_type || '—'}</td>
           <td style="font-size:11px;color:var(--muted2);">${tokensStr}</td>
           <td class="usd-value">${fmtUsd(pos.total_usd)}</td>
-          <td class="editable-cell pos-initial" title="Клик для редактирования">${initialVal !== '' ? fmtUsd(initialVal) : '—'}</td>
+          <td class="editable-cell pos-initial" title="Клик для редактирования">${initialDisplay}</td>
           <td>${profitVal}</td>
           <td>${apyVal}</td>
-          <td class="editable-cell pos-opened" title="Клик для редактирования">${openedAt}</td>
+          <td class="editable-cell pos-opened" title="Клик для редактирования">${openedAt}${hasManual ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : ''}</td>
           <td>${daysOpen}</td>
         `;
         positionsTableBody.appendChild(tr);

@@ -107,21 +107,19 @@ function flattenPositions(protocolList) {
 function computeDerived(pos, manual, wallet) {
   const openedAtManual = manual?.opened_at_manual || null;
   const initialDepositUsd = manual?.initial_deposit_usd ?? null;
-  const effective = openedAtManual || pos.opened_at_auto;
+  const hasManualOpenedAt = openedAtManual != null;
+  const effective = openedAtManual || null;
 
-  const nowSec = Math.floor(Date.now() / 1000);
   let daysOpen = null;
   let profitUsd = null;
   let apyPercent = null;
 
-  if (effective) {
+  if (effective && initialDepositUsd != null && initialDepositUsd > 0) {
+    const nowSec = Math.floor(Date.now() / 1000);
     const effectiveSec = Math.floor(new Date(effective).getTime() / 1000);
     daysOpen = Math.floor((nowSec - effectiveSec) / SEC_PER_DAY);
-  }
-
-  if (initialDepositUsd != null && initialDepositUsd > 0) {
     profitUsd = pos.total_usd - initialDepositUsd;
-    if (daysOpen != null && daysOpen > 0) {
+    if (daysOpen > 0) {
       const years = daysOpen / 365;
       apyPercent = ((pos.total_usd / initialDepositUsd) ** (1 / years) - 1) * 100;
     }
@@ -131,6 +129,7 @@ function computeDerived(pos, manual, wallet) {
     ...pos,
     wallet: wallet || pos.wallet,
     opened_at_manual: openedAtManual,
+    has_manual_opened_at: hasManualOpenedAt,
     opened_at_effective: effective,
     days_open: daysOpen,
     initial_deposit_usd: initialDepositUsd,
