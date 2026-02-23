@@ -102,6 +102,27 @@
   .editable-cell { cursor: pointer; min-width: 90px; }
   .editable-cell:hover { background: rgba(0,229,160,0.06); border-radius: 4px; }
   .editable-cell input { width: 100%; max-width: 110px; padding: 4px 8px; font: inherit; background: var(--surface2); border: 1px solid var(--accent); border-radius: 4px; color: var(--text); }
+  .edit-row-btn { padding: 4px 10px; font-size: 11px; cursor: pointer; background: var(--accent); color: var(--btn-primary-text); border: none; border-radius: 6px; font-weight: 600; }
+  .edit-row-btn:hover { filter: brightness(1.1); }
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .modal-box h3 { margin-bottom: 20px; font-size: 18px; color: var(--text); }
+  .modal-box .form-group { margin-bottom: 16px; }
+  .modal-box .form-group label { display: block; margin-bottom: 6px; font-size: 11px; color: var(--muted2); text-transform: uppercase; }
+  .modal-box input { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; box-sizing: border-box; }
+  .modal-box input:focus { outline: none; border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+  .modal-actions .btn { flex: 1; }
+  .modal-status { margin-top: 12px; font-size: 13px; min-height: 20px; }
+  .modal-status.success { color: var(--accent); }
+  .modal-status.error { color: var(--danger); }
 </style>
 </head>
 <body>
@@ -146,6 +167,7 @@
           <th id="thPosApy">APY %</th>
           <th id="thPosOpened">Открыта</th>
           <th id="thPosDays">Дней</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="positionsTableBody"></tbody>
@@ -186,6 +208,25 @@
   <div class="loading" id="loading" style="display:none;">Загрузка...</div>
   <div class="empty" id="empty" style="display:none;">Введите адрес и нажмите «Загрузить»</div>
   <div class="error" id="error" style="display:none;"></div>
+
+  <div class="modal-overlay" id="positionModal">
+    <div class="modal-box">
+      <h3 id="modalTitle">Редактировать позицию</h3>
+      <div class="form-group">
+        <label id="modalLblDate">Дата открытия</label>
+        <input type="date" id="modalDate" />
+      </div>
+      <div class="form-group">
+        <label id="modalLblInitial">Начальная сумма, $</label>
+        <input type="number" id="modalInitial" step="0.01" min="0" placeholder="0" />
+      </div>
+      <div class="modal-status" id="modalStatus"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="modalCancel">Отмена</button>
+        <button class="btn btn-primary" id="modalSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -202,7 +243,10 @@ const t = {
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций',
     apiUnavailable: 'API недоступен. Разверните проект на Vercel и откройте сайт по Vercel-адресу.',
-    apiHint: 'При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app'
+    apiHint: 'При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app',
+    modalTitle: 'Редактировать позицию', modalLblDate: 'Дата открытия', modalLblInitial: 'Начальная сумма, $',
+    modalCancel: 'Отмена', modalSave: 'Сохранить', modalSaving: 'Сохранение...', modalSaved: 'Сохранено',
+    modalError: 'Ошибка сохранения', editBtn: '✏️ Изменить'
   },
   en: {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
@@ -213,7 +257,10 @@ const t = {
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions',
     apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.',
-    apiHint: 'If load fails: open debank.html?api=https://your-vercel.vercel.app'
+    apiHint: 'If load fails: open debank.html?api=https://your-vercel.vercel.app',
+    modalTitle: 'Edit position', modalLblDate: 'Date opened', modalLblInitial: 'Initial amount, $',
+    modalCancel: 'Cancel', modalSave: 'Save', modalSaving: 'Saving...', modalSaved: 'Saved',
+    modalError: 'Save failed', editBtn: '✏️ Edit'
   }
 };
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
@@ -269,6 +316,14 @@ function setLang(v) {
   document.querySelector('.btn-secondary').textContent = t[lang].back;
   const hint = document.getElementById('apiHint');
   if (hint) hint.textContent = t[lang].apiHint;
+  const modalTitle = document.getElementById('modalTitle');
+  if (modalTitle) modalTitle.textContent = t[lang].modalTitle;
+  ['modalLblDate','modalLblInitial','modalCancel','modalSave'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t[lang][id];
+  });
+  const editBtns = document.querySelectorAll('.edit-row-btn');
+  editBtns.forEach(b => b.textContent = t[lang].editBtn);
 }
 function fmt(n) {
   if (n == null || isNaN(n)) return '—';
@@ -279,80 +334,115 @@ function fmtUsd(n) {
   return '$' + Number(n).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 }
 
-function bindPositionEdits(fmtUsd, onSave) {
+function bindPositionEdits(fmtUsd) {
   const wrap = document.getElementById('positionsTableBody');
   const tableWrap = document.getElementById('positionsTableWrap');
-  if (!wrap || !tableWrap || wrap.dataset.editBound) return;
+  const modal = document.getElementById('positionModal');
+  const modalDate = document.getElementById('modalDate');
+  const modalInitial = document.getElementById('modalInitial');
+  const modalStatus = document.getElementById('modalStatus');
+  const modalSave = document.getElementById('modalSave');
+  const modalCancel = document.getElementById('modalCancel');
+  if (!wrap || !tableWrap || !modal || wrap.dataset.editBound) return;
   wrap.dataset.editBound = '1';
+
+  let currentTr = null;
+
+  function closeModal() {
+    modal.classList.remove('open');
+    currentTr = null;
+    modalStatus.textContent = '';
+    modalStatus.className = 'modal-status';
+  }
+
+  function updateRowFromMerged(tr, merged) {
+    const showMetrics = merged.opened_at_effective && merged.initial_deposit_usd != null;
+    tr.dataset.pos = JSON.stringify(merged);
+    tr.cells[5].textContent = merged.initial_deposit_usd != null ? fmtUsd(merged.initial_deposit_usd) : '—';
+    tr.cells[6].textContent = showMetrics && merged.profit_usd != null ? fmtUsd(merged.profit_usd) : '—';
+    tr.cells[7].textContent = showMetrics && merged.apy_percent != null ? merged.apy_percent.toFixed(2) + '%' : '—';
+    tr.cells[8].innerHTML = merged.opened_at_effective ? merged.opened_at_effective.slice(0, 10) + (merged.has_manual_opened_at ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : '') : '—';
+    tr.cells[9].textContent = showMetrics && merged.days_open != null ? String(merged.days_open) : '—';
+  }
+
   wrap.addEventListener('click', (e) => {
-    const cell = e.target.closest('.editable-cell');
-    if (!cell || cell.querySelector('input')) return;
-    const tr = cell.closest('tr');
-    const base = tableWrap.dataset.base || window.location.origin;
-    const wallet = tableWrap.dataset.wallet || '';
+    const btn = e.target.closest('.edit-row-btn');
+    if (!btn) return;
+    const tr = btn.closest('tr');
+    if (!tr || !tr.dataset.pos) return;
     const pos = JSON.parse(tr.dataset.pos || '{}');
-    const isDate = cell.classList.contains('pos-opened');
-    const isInitial = cell.classList.contains('pos-initial');
-    if (!isDate && !isInitial) return;
-    const current = isDate ? (pos.opened_at_effective || '').slice(0, 10) : (pos.initial_deposit_usd != null ? String(pos.initial_deposit_usd) : '');
-    const inp = document.createElement('input');
-    inp.type = isDate ? 'date' : 'number';
-    inp.step = isDate ? null : '0.01';
-    inp.value = current;
-    cell.textContent = '';
-    cell.appendChild(inp);
-    inp.focus();
-    let done = false;
-    function finish() {
-      if (done) return;
-      done = true;
-      const val = inp.value.trim();
-      if (inp.parentNode) cell.removeChild(inp);
-      cell.textContent = isDate ? (val || '—') : (val ? fmtUsd(Number(val)) : '—');
-      if (!val && !isDate) cell.textContent = '—';
+    currentTr = tr;
+    const base = tableWrap.dataset.base || window.location.origin;
+    tableWrap.dataset._editBase = base;
+    tableWrap.dataset._editWallet = tableWrap.dataset.wallet || '';
+    document.getElementById('modalTitle').textContent = (t[lang].modalTitle + ': ' + (pos.protocol_name || '')).trim();
+    modalDate.value = (pos.opened_at_effective || '').slice(0, 10);
+    modalInitial.value = pos.initial_deposit_usd != null ? String(pos.initial_deposit_usd) : '';
+    modalStatus.textContent = '';
+    modalStatus.className = 'modal-status';
+    modal.classList.add('open');
+    modalDate.focus();
+  });
+
+  modalCancel.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+  modalSave.addEventListener('click', async () => {
+    if (!currentTr) return;
+    const pos = JSON.parse(currentTr.dataset.pos || '{}');
+    const base = tableWrap.dataset._editBase || tableWrap.dataset.base || window.location.origin;
+    const wallet = tableWrap.dataset._editWallet || tableWrap.dataset.wallet || '';
+    const dateVal = modalDate.value.trim();
+    const initialVal = modalInitial.value.trim();
+    modalStatus.textContent = t[lang].modalSaving;
+    modalStatus.className = 'modal-status';
+    modalSave.disabled = true;
+    try {
       const payload = {
         wallet,
         chain: pos.chain,
         protocol_id: pos.protocol_id,
         position_type: pos.position_type,
         position_key: pos.position_key || 'default',
-        opened_at_manual: isDate ? (val || null) : ((pos.opened_at_effective || '').slice(0, 10) || null),
-        initial_deposit_usd: isInitial ? (val ? Number(val) : null) : (pos.initial_deposit_usd ?? null)
+        opened_at_manual: dateVal || null,
+        initial_deposit_usd: initialVal ? Number(initialVal) : null
       };
-      fetch(base + '/api/defi-position-manual', {
+      const res = await fetch(base + '/api/defi-position-manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).then(r => r.ok ? r.json() : Promise.reject(new Error('Save failed')))
-        .then((saved) => {
-          const merged = { ...pos, opened_at_manual: saved.opened_at_manual, initial_deposit_usd: saved.initial_deposit_usd };
-          merged.has_manual_opened_at = merged.opened_at_manual != null;
-          merged.opened_at_effective = merged.opened_at_manual || null;
-          const eff = merged.opened_at_effective;
-          const init = merged.initial_deposit_usd;
-          if (eff && init != null && init > 0) {
-            const nowSec = Math.floor(Date.now() / 1000);
-            merged.days_open = Math.floor((nowSec - Math.floor(new Date(eff).getTime() / 1000)) / 86400);
-            merged.profit_usd = pos.total_usd - init;
-            merged.apy_percent = merged.days_open > 0 ? ((pos.total_usd / init) ** (365 / merged.days_open) - 1) * 100 : null;
-          } else {
-            merged.days_open = null;
-            merged.profit_usd = null;
-            merged.apy_percent = null;
-          }
-          const showMetrics = merged.opened_at_effective && merged.initial_deposit_usd != null;
-          tr.dataset.pos = JSON.stringify(merged);
-          tr.cells[5].textContent = merged.initial_deposit_usd != null ? fmtUsd(merged.initial_deposit_usd) : '—';
-          tr.cells[6].textContent = showMetrics && merged.profit_usd != null ? fmtUsd(merged.profit_usd) : '—';
-          tr.cells[7].textContent = showMetrics && merged.apy_percent != null ? merged.apy_percent.toFixed(2) + '%' : '—';
-          tr.cells[8].innerHTML = merged.opened_at_effective ? merged.opened_at_effective.slice(0, 10) + (merged.has_manual_opened_at ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : '') : '—';
-          tr.cells[9].textContent = showMetrics && merged.days_open != null ? String(merged.days_open) : '—';
-        })
-        .catch(() => {});
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.detail || 'Save failed');
+      }
+      const saved = data;
+      const merged = { ...pos, opened_at_manual: saved.opened_at_manual, initial_deposit_usd: saved.initial_deposit_usd };
+      merged.has_manual_opened_at = merged.opened_at_manual != null;
+      merged.opened_at_effective = merged.opened_at_manual || null;
+      const eff = merged.opened_at_effective;
+      const init = merged.initial_deposit_usd;
+      if (eff && init != null && init > 0) {
+        const nowSec = Math.floor(Date.now() / 1000);
+        merged.days_open = Math.floor((nowSec - Math.floor(new Date(eff).getTime() / 1000)) / 86400);
+        merged.profit_usd = pos.total_usd - init;
+        merged.apy_percent = merged.days_open > 0 ? ((pos.total_usd / init) ** (365 / merged.days_open) - 1) * 100 : null;
+      } else {
+        merged.days_open = null;
+        merged.profit_usd = null;
+        merged.apy_percent = null;
+      }
+      updateRowFromMerged(currentTr, merged);
+      modalStatus.textContent = t[lang].modalSaved;
+      modalStatus.className = 'modal-status success';
+      setTimeout(closeModal, 800);
+    } catch (err) {
+      modalStatus.textContent = (t[lang].modalError + ': ' + (err.message || err));
+      modalStatus.className = 'modal-status error';
+    } finally {
+      modalSave.disabled = false;
     }
-    inp.addEventListener('blur', finish);
-    inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') finish(); });
-    if (isDate) inp.addEventListener('change', finish);
   });
 }
 
@@ -476,6 +566,7 @@ async function loadAssets() {
         const initialDisplay = pos.initial_deposit_usd != null ? fmtUsd(pos.initial_deposit_usd) : '—';
         const profitVal = showMetrics && pos.profit_usd != null ? fmtUsd(pos.profit_usd) : '—';
         const apyVal = showMetrics && pos.apy_percent != null ? pos.apy_percent.toFixed(2) + '%' : '—';
+        const editBtnText = lang === 'ru' ? '✏️ Изменить' : '✏️ Edit';
         tr.innerHTML = `
           <td>
             <div class="protocol-cell">
@@ -487,20 +578,21 @@ async function loadAssets() {
           <td>${pos.position_type || '—'}</td>
           <td style="font-size:11px;color:var(--muted2);">${tokensStr}</td>
           <td class="usd-value">${fmtUsd(pos.total_usd)}</td>
-          <td class="editable-cell pos-initial" title="Клик для редактирования">${initialDisplay}</td>
+          <td>${initialDisplay}</td>
           <td>${profitVal}</td>
           <td>${apyVal}</td>
-          <td class="editable-cell pos-opened" title="Клик для редактирования">${openedAt}${hasManual ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : ''}</td>
+          <td>${openedAt}${hasManual ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : ''}</td>
           <td>${daysOpen}</td>
+          <td><button class="edit-row-btn" type="button">${editBtnText}</button></td>
         `;
         positionsTableBody.appendChild(tr);
       });
       document.getElementById('positionsTableWrap').dataset.base = base;
       document.getElementById('positionsTableWrap').dataset.wallet = addrLower;
-      bindPositionEdits(fmtUsd, loadAssets);
+      bindPositionEdits(fmtUsd);
     } else {
       positionsTableWrap.style.display = 'block';
-      positionsTableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
+      positionsTableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
 
     summaryEl.style.display = 'grid';
