@@ -324,11 +324,36 @@ function bindPositionEdits(fmtUsd, onSave) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       }).then(r => r.ok ? r.json() : Promise.reject(new Error('Save failed')))
-        .then(() => onSave())
+        .then((saved) => {
+          const merged = { ...pos, opened_at_manual: saved.opened_at_manual, initial_deposit_usd: saved.initial_deposit_usd };
+          merged.has_manual_opened_at = merged.opened_at_manual != null;
+          merged.opened_at_effective = merged.opened_at_manual || null;
+          const eff = merged.opened_at_effective;
+          const init = merged.initial_deposit_usd;
+          if (eff && init != null && init > 0) {
+            const nowSec = Math.floor(Date.now() / 1000);
+            merged.days_open = Math.floor((nowSec - Math.floor(new Date(eff).getTime() / 1000)) / 86400);
+            merged.profit_usd = pos.total_usd - init;
+            merged.apy_percent = merged.days_open > 0 ? ((pos.total_usd / init) ** (365 / merged.days_open) - 1) * 100 : null;
+          } else {
+            merged.days_open = null;
+            merged.profit_usd = null;
+            merged.apy_percent = null;
+          }
+          const showMetrics = merged.opened_at_effective && merged.initial_deposit_usd != null;
+          tr.dataset.pos = JSON.stringify(merged);
+          const showMetrics = merged.opened_at_effective && merged.initial_deposit_usd != null;
+          tr.cells[5].textContent = merged.initial_deposit_usd != null ? fmtUsd(merged.initial_deposit_usd) : '—';
+          tr.cells[6].textContent = showMetrics && merged.profit_usd != null ? fmtUsd(merged.profit_usd) : '—';
+          tr.cells[7].textContent = showMetrics && merged.apy_percent != null ? merged.apy_percent.toFixed(2) + '%' : '—';
+          tr.cells[8].innerHTML = merged.opened_at_effective ? merged.opened_at_effective.slice(0, 10) + (merged.has_manual_opened_at ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : '') : '—';
+          tr.cells[9].textContent = showMetrics && merged.days_open != null ? String(merged.days_open) : '—';
+        })
         .catch(() => {});
     }
     inp.addEventListener('blur', finish);
     inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') finish(); });
+    if (isDate) inp.addEventListener('change', finish);
   });
 }
 
