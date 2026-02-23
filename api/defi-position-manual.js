@@ -2,7 +2,8 @@
  * POST /api/defi-position-manual
  * Сохраняет ручные значения с merge — никогда не затирает существующие поля.
  * Ключ Redis: manual:{wallet}:{chain}:{protocolId}:{positionKey}
- * Значение: { openedAt, initialDepositUsd }
+ * Значение: { openedAt, initialDepositUsd, withdrawnUsd, status }
+ * status: "open" | "close"
  */
 
 const { redisGet, redisSet } = require('../lib/redis');
@@ -53,6 +54,18 @@ module.exports = async function handler(req, res) {
       ? Number(initialDepositUsd) : null;
   }
 
+  let withdrawnUsd = body.withdrawnUsd;
+  if (withdrawnUsd !== undefined) {
+    withdrawnUsd = (withdrawnUsd != null && !isNaN(Number(withdrawnUsd)))
+      ? Number(withdrawnUsd) : null;
+  }
+
+  let status = body.status;
+  if (status !== undefined) {
+    const s = String(status || '').trim().toLowerCase();
+    status = (s === 'close' || s === 'closed') ? 'close' : 'open';
+  }
+
   try {
     const existing = await redisGet(key);
     const parsed = (existing && typeof existing === 'object') ? { ...existing } : {};
@@ -60,6 +73,8 @@ module.exports = async function handler(req, res) {
     const updated = { ...parsed };
     if (openedAt !== undefined) updated.openedAt = openedAt;
     if (initialDepositUsd !== undefined) updated.initialDepositUsd = initialDepositUsd;
+    if (withdrawnUsd !== undefined) updated.withdrawnUsd = withdrawnUsd;
+    if (status !== undefined) updated.status = status;
 
     await redisSet(key, updated);
     console.log('MANUAL_SAVE_STORED', key, updated);

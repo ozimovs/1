@@ -116,13 +116,19 @@
   .modal-box h3 { margin-bottom: 20px; font-size: 18px; color: var(--text); }
   .modal-box .form-group { margin-bottom: 16px; }
   .modal-box .form-group label { display: block; margin-bottom: 6px; font-size: 11px; color: var(--muted2); text-transform: uppercase; }
-  .modal-box input { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; box-sizing: border-box; }
-  .modal-box input:focus { outline: none; border-color: var(--accent); }
+  .modal-box input, .modal-box select { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; box-sizing: border-box; }
+  .modal-box input:focus, .modal-box select:focus { outline: none; border-color: var(--accent); }
+  .status-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .status-badge.open { background: rgba(0,229,160,0.2); color: var(--accent); }
+  .status-badge.close { background: rgba(113,128,150,0.3); color: var(--muted2); }
   .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
   .modal-actions .btn { flex: 1; }
   .modal-status { margin-top: 12px; font-size: 13px; min-height: 20px; }
   .modal-status.success { color: var(--accent); }
   .modal-status.error { color: var(--danger); }
+  .profit-positive { color: var(--accent); }
+  .profit-negative { color: var(--danger); }
+  .profit-zero { color: var(--muted2); }
 </style>
 </head>
 <body>
@@ -157,16 +163,17 @@
     <table>
       <thead>
         <tr>
-          <th id="thPosProtocol">Протокол</th>
-          <th id="thPosChain">Сеть</th>
-          <th id="thPosType">Тип</th>
-          <th id="thPosTokens">Токены</th>
-          <th id="thPosUsd">Сумма, $</th>
-          <th id="thPosInitial">Нач. сумма, $</th>
+          <th id="thPosProtocol">DeFi‑протокол</th>
+          <th id="thPosDateOpen">Дата откр.</th>
+          <th id="thPosInitial">Сумма внесена, $</th>
+          <th id="thPosDays">Дней в позиц.</th>
+          <th id="thPosUsd">Текущая стоимость, $</th>
+          <th id="thPosUpdated">Дата обновл.</th>
+          <th id="thPosWithdrawn">Выведено, $</th>
           <th id="thPosProfit">Прибыль, $</th>
-          <th id="thPosApy">APY %</th>
-          <th id="thPosOpened">Открыта</th>
-          <th id="thPosDays">Дней</th>
+          <th id="thPosRoi">Доходность</th>
+          <th id="thPosApy">Годовая доходность</th>
+          <th id="thPosStatus">Состояние</th>
           <th></th>
         </tr>
       </thead>
@@ -220,6 +227,17 @@
         <label id="modalLblInitial">Начальная сумма, $</label>
         <input type="number" id="modalInitial" step="0.01" min="0" placeholder="0" />
       </div>
+      <div class="form-group">
+        <label id="modalLblWithdrawn">Выведено, $</label>
+        <input type="number" id="modalWithdrawn" step="0.01" min="0" placeholder="0" />
+      </div>
+      <div class="form-group">
+        <label id="modalLblStatus">Состояние</label>
+        <select id="modalStatusSelect">
+          <option value="open">open</option>
+          <option value="close">close</option>
+        </select>
+      </div>
       <div class="modal-status" id="modalStatus"></div>
       <div class="modal-actions">
         <button class="btn btn-secondary" id="modalCancel">Отмена</button>
@@ -238,13 +256,15 @@ const t = {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
-    thPosProtocol: 'Протокол', thPosChain: 'Сеть', thPosType: 'Тип', thPosTokens: 'Токены', thPosUsd: 'Сумма, $', thPosInitial: 'Нач. сумма, $', thPosProfit: 'Прибыль, $', thPosApy: 'APY %', thPosOpened: 'Открыта', thPosDays: 'Дней',
+    thPosProtocol: 'DeFi‑протокол', thPosDateOpen: 'Дата откр.', thPosInitial: 'Сумма внесена, $', thPosDays: 'Дней в позиц.', thPosUsd: 'Текущая стоимость, $', thPosUpdated: 'Дата обновл.', thPosWithdrawn: 'Выведено, $', thPosProfit: 'Прибыль, $', thPosRoi: 'Доходность', thPosApy: 'Годовая доходность',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций',
     apiUnavailable: 'API недоступен. Разверните проект на Vercel и откройте сайт по Vercel-адресу.',
     apiHint: 'При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app',
+    thPosStatus: 'Состояние',
     modalTitle: 'Редактировать позицию', modalLblDate: 'Дата открытия', modalLblInitial: 'Начальная сумма, $',
+    modalLblWithdrawn: 'Выведено, $', modalLblStatus: 'Состояние',
     modalCancel: 'Отмена', modalSave: 'Сохранить', modalSaving: 'Сохранение...', modalSaved: 'Сохранено',
     modalError: 'Ошибка сохранения', editBtn: '✏️ Изменить'
   },
@@ -252,13 +272,15 @@ const t = {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
-    thPosProtocol: 'Protocol', thPosChain: 'Chain', thPosType: 'Type', thPosTokens: 'Tokens', thPosUsd: 'Sum, $', thPosInitial: 'Initial, $', thPosProfit: 'Profit, $', thPosApy: 'APY %', thPosOpened: 'Opened', thPosDays: 'Days',
+    thPosProtocol: 'DeFi protocol', thPosDateOpen: 'Date open', thPosInitial: 'Deposit, $', thPosDays: 'Days in pos.', thPosUsd: 'Current value, $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn, $', thPosProfit: 'Profit, $', thPosRoi: 'ROI', thPosApy: 'APY',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions',
     apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.',
     apiHint: 'If load fails: open debank.html?api=https://your-vercel.vercel.app',
+    thPosStatus: 'Status',
     modalTitle: 'Edit position', modalLblDate: 'Date opened', modalLblInitial: 'Initial amount, $',
+    modalLblWithdrawn: 'Withdrawn, $', modalLblStatus: 'Status',
     modalCancel: 'Cancel', modalSave: 'Save', modalSaving: 'Saving...', modalSaved: 'Saved',
     modalError: 'Save failed', editBtn: '✏️ Edit'
   }
@@ -293,21 +315,7 @@ function setLang(v) {
   const sectionTokens = document.getElementById('sectionTokens');
   if (sectionDefi) sectionDefi.textContent = t[lang].sectionDefi;
   if (sectionTokens) sectionTokens.textContent = t[lang].sectionTokens;
-  const thPosProtocol = document.getElementById('thPosProtocol');
-  if (thPosProtocol) thPosProtocol.textContent = t[lang].thPosProtocol;
-  const thPosChain = document.getElementById('thPosChain');
-  if (thPosChain) thPosChain.textContent = t[lang].thPosChain;
-  const thPosType = document.getElementById('thPosType');
-  if (thPosType) thPosType.textContent = t[lang].thPosType;
-  const thPosTokens = document.getElementById('thPosTokens');
-  if (thPosTokens) thPosTokens.textContent = t[lang].thPosTokens;
-  const thPosUsd = document.getElementById('thPosUsd');
-  if (thPosUsd) thPosUsd.textContent = t[lang].thPosUsd;
-  const thPosOpened = document.getElementById('thPosOpened');
-  if (thPosOpened) thPosOpened.textContent = t[lang].thPosOpened;
-  const thPosDays = document.getElementById('thPosDays');
-  if (thPosDays) thPosDays.textContent = t[lang].thPosDays;
-  ['thPosInitial','thPosProfit','thPosApy'].forEach(id => {
+  ['thPosProtocol','thPosDateOpen','thPosInitial','thPosDays','thPosUsd','thPosUpdated','thPosWithdrawn','thPosProfit','thPosRoi','thPosApy','thPosStatus'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = t[lang][id];
   });
@@ -318,7 +326,7 @@ function setLang(v) {
   if (hint) hint.textContent = t[lang].apiHint;
   const modalTitle = document.getElementById('modalTitle');
   if (modalTitle) modalTitle.textContent = t[lang].modalTitle;
-  ['modalLblDate','modalLblInitial','modalCancel','modalSave'].forEach(id => {
+  ['modalLblDate','modalLblInitial','modalLblWithdrawn','modalLblStatus','modalCancel','modalSave'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = t[lang][id];
   });
@@ -334,6 +342,22 @@ function fmtDate(v) {
   const s = typeof v === 'string' ? v : (v.toISOString ? v.toISOString() : String(v));
   return (s && s.length >= 10) ? s.slice(0, 10) : '—';
 }
+function fmtDateDDMMYYYY(v) {
+  if (v == null) return '—';
+  const s = typeof v === 'string' ? v : (v.toISOString ? v.toISOString() : String(v));
+  if (!s || s.length < 10) return '—';
+  const [y, m, d] = s.slice(0, 10).split('-');
+  return `${d}.${m}.${y}`;
+}
+function fmtRoi(v) {
+  if (v == null || isNaN(v)) return '—';
+  const sep = lang === 'ru' ? ',' : '.';
+  return Number(v).toFixed(1).replace('.', sep) + '%';
+}
+function fmtApy(v) {
+  if (v == null || isNaN(v)) return '—';
+  return Math.round(v) + '%';
+}
 function fmtUsd(n) {
   if (n == null || isNaN(n) || n < 0.01) return '$0';
   return '$' + Number(n).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
@@ -345,7 +369,9 @@ function bindPositionEdits(fmtUsd) {
   const modal = document.getElementById('positionModal');
   const modalDate = document.getElementById('modalDate');
   const modalInitial = document.getElementById('modalInitial');
-  const modalStatus = document.getElementById('modalStatus');
+  const modalWithdrawn = document.getElementById('modalWithdrawn');
+  const modalStatusSelect = document.getElementById('modalStatusSelect');
+  const modalStatusMsg = document.getElementById('modalStatus');
   const modalSave = document.getElementById('modalSave');
   const modalCancel = document.getElementById('modalCancel');
   if (!wrap || !tableWrap || !modal || wrap.dataset.editBound) return;
@@ -356,18 +382,32 @@ function bindPositionEdits(fmtUsd) {
   function closeModal() {
     modal.classList.remove('open');
     currentTr = null;
-    modalStatus.textContent = '';
-    modalStatus.className = 'modal-status';
+    modalStatusMsg.textContent = '';
+    modalStatusMsg.className = 'modal-status';
+  }
+
+  function statusBadge(s) {
+    const v = (s || 'open').toLowerCase();
+    const cls = (v === 'close' || v === 'closed') ? 'close' : 'open';
+    const text = cls === 'close' ? 'close' : 'open';
+    return `<span class="status-badge ${cls}">${text}</span>`;
   }
 
   function updateRowFromMerged(tr, merged) {
-    const showMetrics = merged.manualOpenedAt && merged.manualInitialUsd != null;
     tr.dataset.pos = JSON.stringify(merged);
-    tr.cells[5].textContent = merged.manualInitialUsd != null ? fmtUsd(merged.manualInitialUsd) : '—';
-    tr.cells[6].textContent = showMetrics && merged.profitUsd != null ? fmtUsd(merged.profitUsd) : '—';
-    tr.cells[7].textContent = showMetrics && merged.apyPercent != null ? merged.apyPercent.toFixed(2) + '%' : '—';
-    tr.cells[8].innerHTML = fmtDate(merged.manualOpenedAt) + (merged.manualOpenedAt ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : '');
-    tr.cells[9].textContent = showMetrics && merged.daysOpen != null ? String(merged.daysOpen) : '—';
+    tr.cells[1].textContent = merged.manualOpenedAt ? fmtDateDDMMYYYY(merged.manualOpenedAt) : '—';
+    tr.cells[2].textContent = merged.manualInitialUsd != null ? fmtUsd(merged.manualInitialUsd) : '—';
+    tr.cells[3].textContent = merged.daysOpen != null ? String(merged.daysOpen) : '—';
+    tr.cells[6].textContent = merged.withdrawnUsd != null && merged.withdrawnUsd !== 0 ? fmtUsd(merged.withdrawnUsd) : '—';
+    const profitUsd = merged.profitUsd;
+    const profitClass = profitUsd != null && merged.manualInitialUsd != null
+      ? (profitUsd > 0 ? 'profit-positive' : (profitUsd < 0 ? 'profit-negative' : 'profit-zero'))
+      : 'profit-zero';
+    tr.cells[7].textContent = profitUsd != null && merged.manualInitialUsd != null ? fmtUsd(profitUsd) : '—';
+    tr.cells[7].className = profitClass;
+    tr.cells[8].textContent = merged.roiPercent != null && merged.manualInitialUsd != null ? fmtRoi(merged.roiPercent) : '—';
+    tr.cells[9].textContent = merged.apyPercent != null && merged.manualOpenedAt && merged.manualInitialUsd != null ? fmtApy(merged.apyPercent) : '—';
+    tr.cells[10].innerHTML = statusBadge(merged.status);
   }
 
   wrap.addEventListener('click', (e) => {
@@ -383,8 +423,10 @@ function bindPositionEdits(fmtUsd) {
     document.getElementById('modalTitle').textContent = (t[lang].modalTitle + ': ' + (pos.protocol_name || '')).trim();
     modalDate.value = (pos.manualOpenedAt ?? '').slice(0, 10);
     modalInitial.value = pos.manualInitialUsd != null ? String(pos.manualInitialUsd) : '';
-    modalStatus.textContent = '';
-    modalStatus.className = 'modal-status';
+    modalWithdrawn.value = pos.withdrawnUsd != null && pos.withdrawnUsd !== 0 ? String(pos.withdrawnUsd) : '';
+    modalStatusSelect.value = (pos.status || 'open').toLowerCase() === 'close' ? 'close' : 'open';
+    modalStatusMsg.textContent = '';
+    modalStatusMsg.className = 'modal-status';
     modal.classList.add('open');
     modalDate.focus();
   });
@@ -400,8 +442,10 @@ function bindPositionEdits(fmtUsd) {
     const wallet = tableWrap.dataset._editWallet || tableWrap.dataset.wallet || '';
     const dateVal = modalDate.value.trim();
     const initialVal = modalInitial.value.trim();
-    modalStatus.textContent = t[lang].modalSaving;
-    modalStatus.className = 'modal-status';
+    const withdrawnVal = modalWithdrawn.value.trim();
+    const statusVal = modalStatusSelect.value;
+    modalStatusMsg.textContent = t[lang].modalSaving;
+    modalStatusMsg.className = 'modal-status';
     modalSave.disabled = true;
     try {
       const payload = {
@@ -410,7 +454,9 @@ function bindPositionEdits(fmtUsd) {
         protocolId: pos.protocol_id,
         positionKey: pos.position_key || 'default',
         openedAt: dateVal || null,
-        initialDepositUsd: initialVal ? Number(initialVal) : null
+        initialDepositUsd: initialVal ? Number(initialVal) : null,
+        withdrawnUsd: withdrawnVal ? Number(withdrawnVal) : null,
+        status: statusVal
       };
       const res = await fetch(base + '/api/defi-position-manual', {
         method: 'POST',
@@ -427,28 +473,44 @@ function bindPositionEdits(fmtUsd) {
         throw new Error(data.error || data.detail || ('Save failed: ' + res.status));
       }
       const saved = data;
-      const merged = { ...pos, manualOpenedAt: saved.openedAt ?? null, manualInitialUsd: saved.initialDepositUsd ?? null };
+      const merged = {
+        ...pos,
+        manualOpenedAt: saved.openedAt ?? null,
+        manualInitialUsd: saved.initialDepositUsd ?? null,
+        withdrawnUsd: saved.withdrawnUsd ?? 0,
+        status: (saved.status || 'open').toLowerCase() === 'close' ? 'close' : 'open'
+      };
       const init = merged.manualInitialUsd;
       const eff = merged.manualOpenedAt;
-      if (eff && init != null && init > 0) {
+      const withdrawn = merged.withdrawnUsd ?? 0;
+      merged.lastUpdateDate = merged.lastUpdateDate || new Date().toISOString().slice(0, 10);
+      if (eff) {
         const nowSec = Math.floor(Date.now() / 1000);
         const dateStr = String(eff).slice(0, 10);
-        merged.daysOpen = Math.floor((nowSec - Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000)) / 86400);
-        merged.profitUsd = pos.total_usd - init;
-        merged.apyPercent = merged.daysOpen > 0 ? ((pos.total_usd / init) ** (365 / merged.daysOpen) - 1) * 100 : null;
+        merged.daysOpen = Math.max(0, Math.floor((nowSec - Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000)) / 86400));
       } else {
         merged.daysOpen = null;
+      }
+      if (init != null && init > 0) {
+        const totalWithValue = (pos.total_usd || 0) + withdrawn;
+        merged.profitUsd = totalWithValue - init;
+        merged.roiPercent = (totalWithValue / init - 1) * 100;
+        merged.apyPercent = merged.daysOpen != null && merged.daysOpen >= 1
+          ? ((1 + (totalWithValue / init - 1)) ** (365 / merged.daysOpen) - 1) * 100
+          : null;
+      } else {
         merged.profitUsd = null;
+        merged.roiPercent = null;
         merged.apyPercent = null;
       }
       updateRowFromMerged(currentTr, merged);
-      modalStatus.textContent = t[lang].modalSaved;
-      modalStatus.className = 'modal-status success';
+      modalStatusMsg.textContent = t[lang].modalSaved;
+      modalStatusMsg.className = 'modal-status success';
       closeModal();
       loadAssets();
     } catch (err) {
-      modalStatus.textContent = (t[lang].modalError + ': ' + (err.message || err));
-      modalStatus.className = 'modal-status error';
+      modalStatusMsg.textContent = (t[lang].modalError + ': ' + (err.message || err));
+      modalStatusMsg.className = 'modal-status error';
     } finally {
       modalSave.disabled = false;
     }
@@ -564,16 +626,23 @@ async function loadAssets() {
         const tr = document.createElement('tr');
         tr.dataset.pos = JSON.stringify(pos);
         tr.dataset.wallet = addrLower;
-        const tokensStr = pos.tokens && pos.tokens.length
-          ? pos.tokens.slice(0, 5).map((t) => t.symbol).join(', ')
-          : '—';
-        const openedAt = pos.manualOpenedAt ? fmtDate(pos.manualOpenedAt) : '—';
-        const hasManual = !!pos.manualOpenedAt;
-        const showMetrics = pos.manualOpenedAt && pos.manualInitialUsd != null;
-        const daysOpen = showMetrics && pos.daysOpen != null ? String(pos.daysOpen) : '—';
+        const dateOpenDisplay = pos.manualOpenedAt ? fmtDateDDMMYYYY(pos.manualOpenedAt) : '—';
+        const daysOpenDisplay = pos.daysOpen != null ? String(pos.daysOpen) : '—';
         const initialDisplay = pos.manualInitialUsd != null ? fmtUsd(pos.manualInitialUsd) : '—';
-        const profitVal = showMetrics && pos.profitUsd != null ? fmtUsd(pos.profitUsd) : '—';
-        const apyVal = showMetrics && pos.apyPercent != null ? pos.apyPercent.toFixed(2) + '%' : '—';
+        const updatedDisplay = pos.lastUpdateDate ? fmtDateDDMMYYYY(pos.lastUpdateDate) : '—';
+        const withdrawnDisplay = pos.withdrawnUsd != null && pos.withdrawnUsd !== 0 ? fmtUsd(pos.withdrawnUsd) : '—';
+        const profitUsd = pos.profitUsd;
+        let profitDisplay = '—';
+        let profitClass = 'profit-zero';
+        if (profitUsd != null && pos.manualInitialUsd != null) {
+          profitDisplay = fmtUsd(profitUsd);
+          profitClass = profitUsd > 0 ? 'profit-positive' : (profitUsd < 0 ? 'profit-negative' : 'profit-zero');
+        }
+        const roiDisplay = pos.roiPercent != null && pos.manualInitialUsd != null ? fmtRoi(pos.roiPercent) : '—';
+        const apyDisplay = pos.apyPercent != null && pos.manualOpenedAt && pos.manualInitialUsd != null ? fmtApy(pos.apyPercent) : '—';
+        const statusVal = (pos.status || 'open').toLowerCase();
+        const statusClass = (statusVal === 'close' || statusVal === 'closed') ? 'close' : 'open';
+        const statusText = statusClass === 'close' ? 'close' : 'open';
         const editBtnText = lang === 'ru' ? '✏️ Изменить' : '✏️ Edit';
         tr.innerHTML = `
           <td>
@@ -582,15 +651,16 @@ async function loadAssets() {
               <span class="symbol">${pos.protocol_name}</span>
             </div>
           </td>
-          <td>${pos.chain || '—'}</td>
-          <td>${pos.position_type || '—'}</td>
-          <td style="font-size:11px;color:var(--muted2);">${tokensStr}</td>
-          <td class="usd-value">${fmtUsd(pos.total_usd)}</td>
+          <td>${dateOpenDisplay}</td>
           <td>${initialDisplay}</td>
-          <td>${profitVal}</td>
-          <td>${apyVal}</td>
-          <td>${openedAt}${hasManual ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : ''}</td>
-          <td>${daysOpen}</td>
+          <td>${daysOpenDisplay}</td>
+          <td class="usd-value">${pos.total_usd != null ? fmtUsd(pos.total_usd) : '—'}</td>
+          <td>${updatedDisplay}</td>
+          <td>${withdrawnDisplay}</td>
+          <td class="${profitClass}">${profitDisplay}</td>
+          <td>${roiDisplay}</td>
+          <td>${apyDisplay}</td>
+          <td><span class="status-badge ${statusClass}">${statusText}</span></td>
           <td><button class="edit-row-btn" type="button">${editBtnText}</button></td>
         `;
         positionsTableBody.appendChild(tr);
@@ -600,7 +670,7 @@ async function loadAssets() {
       bindPositionEdits(fmtUsd);
     } else {
       positionsTableWrap.style.display = 'block';
-      positionsTableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
+      positionsTableBody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
 
     summaryEl.style.display = 'grid';
