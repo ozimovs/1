@@ -121,7 +121,21 @@
   .status-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
   .status-badge.open { background: rgba(0,229,160,0.2); color: var(--accent); }
   .status-badge.close { background: rgba(113,128,150,0.3); color: var(--muted2); }
-  .assets-cell-wrap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; }
+  .asset-distribution-wrap { }
+  .asset-distribution-title { font-size: 14px; color: var(--muted2); margin-bottom: 12px; font-weight: 600; }
+  .asset-distribution-card {
+    display: flex; flex-wrap: wrap; gap: 24px; align-items: center;
+    padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  }
+  .asset-donut-wrap { position: relative; width: 180px; height: 180px; flex-shrink: 0; }
+  .asset-donut { width: 100%; height: 100%; border-radius: 50%; }
+  .asset-donut-hole {
+    position: absolute; top: 50%; left: 50%; width: 55%; height: 55%;
+    transform: translate(-50%, -50%); background: var(--surface); border-radius: 50%;
+  }
+  .asset-legend { display: flex; flex-wrap: wrap; gap: 12px 20px; font-size: 12px; }
+  .asset-legend-item { display: flex; align-items: center; gap: 8px; cursor: help; }
+  .asset-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
   .modal-actions .btn { flex: 1; }
   .modal-status { margin-top: 12px; font-size: 13px; min-height: 20px; }
@@ -160,12 +174,21 @@
   </div>
 
   <h2 class="section-title" id="sectionDefi" style="display:none;margin-bottom:16px;font-size:18px;">DeFi позиции</h2>
+  <div class="asset-distribution-wrap" id="assetDistributionWrap" style="display:none;margin-bottom:24px;">
+    <h3 class="asset-distribution-title" id="assetDistributionTitle">Распределение активов в DeFi‑позициях</h3>
+    <div class="asset-distribution-card">
+      <div class="asset-donut-wrap">
+        <div class="asset-donut" id="assetDonut"></div>
+        <div class="asset-donut-hole"></div>
+      </div>
+      <div class="asset-legend" id="assetLegend"></div>
+    </div>
+  </div>
   <div class="table-wrap" id="positionsTableWrap" style="display:none;margin-bottom:32px;">
     <table>
       <thead>
         <tr>
           <th id="thPosProtocol">DeFi‑протокол</th>
-          <th id="thPosAssets">Активы</th>
           <th id="thPosDateOpen">Дата откр.</th>
           <th id="thPosInitial">Сумма внесена, $</th>
           <th id="thPosDays">Дней в позиц.</th>
@@ -258,7 +281,8 @@ const t = {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
-    thPosProtocol: 'DeFi‑протокол', thPosAssets: 'Активы', thPosDateOpen: 'Дата откр.', thPosInitial: 'Сумма внесена, $', thPosDays: 'Дней в позиц.', thPosUsd: 'Текущая стоимость, $', thPosUpdated: 'Дата обновл.', thPosWithdrawn: 'Выведено, $', thPosProfit: 'Прибыль, $', thPosRoi: 'Доходность', thPosApy: 'Годовая доходность',
+    thPosProtocol: 'DeFi‑протокол', thPosDateOpen: 'Дата откр.', thPosInitial: 'Сумма внесена, $', thPosDays: 'Дней в позиц.', thPosUsd: 'Текущая стоимость, $', thPosUpdated: 'Дата обновл.', thPosWithdrawn: 'Выведено, $', thPosProfit: 'Прибыль, $', thPosRoi: 'Доходность', thPosApy: 'Годовая доходность',
+    assetDistributionTitle: 'Распределение активов в DeFi‑позициях',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций',
@@ -274,7 +298,8 @@ const t = {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
-    thPosProtocol: 'DeFi protocol', thPosAssets: 'Assets', thPosDateOpen: 'Date open', thPosInitial: 'Deposit, $', thPosDays: 'Days in pos.', thPosUsd: 'Current value, $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn, $', thPosProfit: 'Profit, $', thPosRoi: 'ROI', thPosApy: 'APY',
+    thPosProtocol: 'DeFi protocol', thPosDateOpen: 'Date open', thPosInitial: 'Deposit, $', thPosDays: 'Days in pos.', thPosUsd: 'Current value, $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn, $', thPosProfit: 'Profit, $', thPosRoi: 'ROI', thPosApy: 'APY',
+    assetDistributionTitle: 'Asset distribution in DeFi positions',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions',
@@ -317,7 +342,7 @@ function setLang(v) {
   const sectionTokens = document.getElementById('sectionTokens');
   if (sectionDefi) sectionDefi.textContent = t[lang].sectionDefi;
   if (sectionTokens) sectionTokens.textContent = t[lang].sectionTokens;
-  ['thPosProtocol','thPosAssets','thPosDateOpen','thPosInitial','thPosDays','thPosUsd','thPosUpdated','thPosWithdrawn','thPosProfit','thPosRoi','thPosApy','thPosStatus'].forEach(id => {
+  ['thPosProtocol','thPosDateOpen','thPosInitial','thPosDays','thPosUsd','thPosUpdated','thPosWithdrawn','thPosProfit','thPosRoi','thPosApy','thPosStatus','assetDistributionTitle'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = t[lang][id];
   });
@@ -360,22 +385,60 @@ function fmtApy(v) {
   if (v == null || isNaN(v)) return '—';
   return Math.round(v) + '%';
 }
-function fmtAssets(pos) {
-  const tokens = pos.tokens;
-  if (!tokens || tokens.length === 0) return '—';
-  const supplyTotal = tokens.filter((t) => (t.amount_usd ?? 0) > 0).reduce((s, t) => s + (t.amount_usd || 0), 0);
-  const netTotal = pos.total_usd;
-  const base = supplyTotal > 0.01 ? supplyTotal : (netTotal != null && Math.abs(netTotal) > 0.01 ? Math.abs(netTotal) : null);
-  const parts = tokens.slice(0, 6).map((t) => {
-    const usd = t.amount_usd ?? 0;
-    const absUsd = Math.abs(usd);
-    const pct = base && absUsd >= 0.01 ? ((usd / base) * 100).toFixed(1) : null;
-    const usdStr = fmtUsd(absUsd);
-    return pct != null ? `${t.symbol} ${usdStr} (${pct}%)` : `${t.symbol} ${usdStr}`;
+const ASSET_CHART_COLORS = ['#00e5a0','#3b82f6','#f59e0b','#a855f7','#ec4899','#06b6d4','#84cc16','#f97316'];
+
+function computeAssetDistribution(positions) {
+  const bySymbol = {};
+  let totalDeFiUsd = 0;
+  for (const pos of positions) {
+    if (pos.fromManualOnly && (pos.total_usd == null || pos.total_usd < 0.01)) continue;
+    totalDeFiUsd += pos.total_usd ?? 0;
+    const tokens = pos.tokens || [];
+    for (const t of tokens) {
+      const sym = (t.symbol || '?').trim();
+      if (!sym) continue;
+      const usd = t.amount_usd ?? 0;
+      bySymbol[sym] = (bySymbol[sym] ?? 0) + usd;
+    }
+  }
+  const assets = Object.entries(bySymbol)
+    .filter(([, usd]) => Math.abs(usd) >= 0.01)
+    .map(([symbol, usd]) => ({ symbol, usd, pct: totalDeFiUsd > 0.01 ? (usd / totalDeFiUsd) * 100 : 0 }))
+    .sort((a, b) => Math.abs(b.usd) - Math.abs(a.usd));
+  return { totalDeFiUsd, assets };
+}
+
+function renderAssetChart(positions) {
+  const wrap = document.getElementById('assetDistributionWrap');
+  const donut = document.getElementById('assetDonut');
+  const legend = document.getElementById('assetLegend');
+  const titleEl = document.getElementById('assetDistributionTitle');
+  if (!wrap || !donut || !legend) return;
+  const { totalDeFiUsd, assets } = computeAssetDistribution(positions);
+  const positiveAssets = assets.filter((a) => a.pct > 0.05);
+  if (positiveAssets.length === 0 || totalDeFiUsd < 0.01) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  if (titleEl) titleEl.textContent = t[lang].assetDistributionTitle;
+  let acc = 0;
+  const parts = positiveAssets.map((a, i) => {
+    const start = acc;
+    acc += a.pct;
+    const color = ASSET_CHART_COLORS[i % ASSET_CHART_COLORS.length];
+    return `${color} ${start.toFixed(2)}% ${acc.toFixed(2)}%`;
   });
-  const title = parts.join(' · ');
-  const short = tokens.length > 3 ? parts.slice(0, 2).join(', ') + '…' : parts.join(', ');
-  return `<span class="assets-cell" title="${title.replace(/"/g, '&quot;')}">${short}</span>`;
+  donut.style.background = parts.length ? `conic-gradient(${parts.join(', ')})` : 'var(--surface2)';
+  const posIdx = {};
+  positiveAssets.forEach((a, i) => { posIdx[a.symbol] = i; });
+  legend.innerHTML = assets.map((a, i) => {
+    const idx = posIdx[a.symbol] ?? i;
+    const color = ASSET_CHART_COLORS[idx % ASSET_CHART_COLORS.length];
+    const pctStr = a.pct.toFixed(1).replace('.', lang === 'ru' ? ',' : '.');
+    const usdStr = fmtUsd(Math.abs(a.usd));
+    return `<div class="asset-legend-item" title="${a.symbol}: ${usdStr} (${pctStr}%)"><span class="asset-legend-dot" style="background:${color}"></span><span>${a.symbol} ${pctStr}%</span></div>`;
+  }).join('');
 }
 function fmtUsd(n) {
   if (n == null || isNaN(n) || n < 0.01) return '$0';
@@ -414,19 +477,19 @@ function bindPositionEdits(fmtUsd) {
 
   function updateRowFromMerged(tr, merged) {
     tr.dataset.pos = JSON.stringify(merged);
-    tr.cells[2].textContent = merged.manualOpenedAt ? fmtDateDDMMYYYY(merged.manualOpenedAt) : '—';
-    tr.cells[3].textContent = merged.manualInitialUsd != null ? fmtUsd(merged.manualInitialUsd) : '—';
-    tr.cells[4].textContent = merged.daysOpen != null ? String(merged.daysOpen) : '—';
-    tr.cells[7].textContent = merged.withdrawnUsd != null && merged.withdrawnUsd !== 0 ? fmtUsd(merged.withdrawnUsd) : '—';
+    tr.cells[1].textContent = merged.manualOpenedAt ? fmtDateDDMMYYYY(merged.manualOpenedAt) : '—';
+    tr.cells[2].textContent = merged.manualInitialUsd != null ? fmtUsd(merged.manualInitialUsd) : '—';
+    tr.cells[3].textContent = merged.daysOpen != null ? String(merged.daysOpen) : '—';
+    tr.cells[6].textContent = merged.withdrawnUsd != null && merged.withdrawnUsd !== 0 ? fmtUsd(merged.withdrawnUsd) : '—';
     const profitUsd = merged.profitUsd;
     const profitClass = profitUsd != null && merged.manualInitialUsd != null
       ? (profitUsd > 0 ? 'profit-positive' : (profitUsd < 0 ? 'profit-negative' : 'profit-zero'))
       : 'profit-zero';
-    tr.cells[8].textContent = profitUsd != null && merged.manualInitialUsd != null ? fmtUsd(profitUsd) : '—';
-    tr.cells[8].className = profitClass;
-    tr.cells[9].textContent = merged.roiPercent != null && merged.manualInitialUsd != null ? fmtRoi(merged.roiPercent) : '—';
-    tr.cells[10].textContent = merged.apyPercent != null && merged.manualOpenedAt && merged.manualInitialUsd != null ? fmtApy(merged.apyPercent) : '—';
-    tr.cells[11].innerHTML = statusBadge(merged.status);
+    tr.cells[7].textContent = profitUsd != null && merged.manualInitialUsd != null ? fmtUsd(profitUsd) : '—';
+    tr.cells[7].className = profitClass;
+    tr.cells[8].textContent = merged.roiPercent != null && merged.manualInitialUsd != null ? fmtRoi(merged.roiPercent) : '—';
+    tr.cells[9].textContent = merged.apyPercent != null && merged.manualOpenedAt && merged.manualInitialUsd != null ? fmtApy(merged.apyPercent) : '—';
+    tr.cells[10].innerHTML = statusBadge(merged.status);
   }
 
   wrap.addEventListener('click', (e) => {
@@ -551,6 +614,7 @@ async function loadAssets() {
   tableEl.style.display = 'none';
   document.getElementById('sectionDefi').style.display = 'none';
   document.getElementById('sectionTokens').style.display = 'none';
+  document.getElementById('assetDistributionWrap').style.display = 'none';
   document.getElementById('positionsTableWrap').style.display = 'none';
 
   if (!addr || !/^0x[a-fA-F0-9]{40}$/.test(addr)) {
@@ -636,6 +700,8 @@ async function loadAssets() {
     document.getElementById('sectionDefi').style.display = 'block';
     document.getElementById('sectionTokens').style.display = 'block';
 
+    renderAssetChart(positionsList);
+
     const positionsTableWrap = document.getElementById('positionsTableWrap');
     const positionsTableBody = document.getElementById('positionsTableBody');
     positionsTableBody.innerHTML = '';
@@ -663,7 +729,6 @@ async function loadAssets() {
         const statusClass = (statusVal === 'close' || statusVal === 'closed') ? 'close' : 'open';
         const statusText = statusClass === 'close' ? 'close' : 'open';
         const editBtnText = lang === 'ru' ? '✏️ Изменить' : '✏️ Edit';
-        const assetsHtml = fmtAssets(pos);
         tr.innerHTML = `
           <td>
             <div class="protocol-cell">
@@ -671,7 +736,6 @@ async function loadAssets() {
               <span class="symbol">${pos.protocol_name}</span>
             </div>
           </td>
-          <td class="assets-cell-wrap" style="font-size:11px;color:var(--muted2);max-width:180px;">${assetsHtml}</td>
           <td>${dateOpenDisplay}</td>
           <td>${initialDisplay}</td>
           <td>${daysOpenDisplay}</td>
@@ -691,7 +755,7 @@ async function loadAssets() {
       bindPositionEdits(fmtUsd);
     } else {
       positionsTableWrap.style.display = 'block';
-      positionsTableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
+      positionsTableBody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
 
     summaryEl.style.display = 'grid';
