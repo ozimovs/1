@@ -38,6 +38,9 @@ module.exports = async function handler(req, res) {
 
   const kvKey = makePositionKvKey(wallet, chain, protocolId, positionType, positionKey);
 
+  // DEBUG: log incoming POST
+  console.log('[defi-position-manual] POST received:', { wallet, chain, protocol_id: protocolId, position_type: positionType, position_key: positionKey, opened_at_manual: body.opened_at_manual, initial_deposit_usd: body.initial_deposit_usd });
+
   let openedAtManual = body.opened_at_manual;
   if (openedAtManual) {
     if (typeof openedAtManual === 'string' && !openedAtManual.endsWith('Z') && !openedAtManual.includes('+')) {
@@ -65,8 +68,10 @@ module.exports = async function handler(req, res) {
     const existing = await redisGet(kvKey);
     if (existing && existing.created_at) record.created_at = existing.created_at;
     await redisSet(kvKey, record);
+    console.log('[defi-position-manual] Redis saved:', { kvKey, record });
     return res.status(200).json(record);
   } catch (err) {
+    console.error('[defi-position-manual] Redis error:', err.message);
     return res.status(500).json({ error: 'Redis storage unavailable', detail: err.message });
   }
 };

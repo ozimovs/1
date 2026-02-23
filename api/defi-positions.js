@@ -191,16 +191,22 @@ module.exports = async function handler(req, res) {
     const rawPositions = flattenPositions(protocolList);
 
     const positions = [];
+    let debuggedFirst = false;
     for (const p of rawPositions) {
       try {
         const manual = await getManualOverride(id, p);
+        if (!debuggedFirst) {
+          const k = makePositionKvKey(id, p.chain, p.protocol_id, p.position_type, p.position_key);
+          console.log('[defi-positions] First position lookup:', { key: k, hasManual: !!manual, manual });
+          debuggedFirst = true;
+        }
         positions.push(computeDerived(p, manual, id));
       } catch (e) {
         positions.push(computeDerived(p, null, id));
       }
     }
 
-    res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate');
+    res.setHeader('Cache-Control', 's-maxage=0, no-store, must-revalidate');
     return res.status(200).json(positions);
   } catch (err) {
     return res.status(500).json({ error: err.message });
