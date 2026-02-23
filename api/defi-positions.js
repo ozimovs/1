@@ -1,6 +1,6 @@
 /**
- * DeFi позиции по кошельку. DeBank all_complex_protocol_list + ручные поправки из KV.
- * position_key: pool.id || position_index || 'default'
+ * DeFi позиции по кошельку. DeBank + ручные данные из Redis.
+ * Одно поле даты: manualOpenedAt.
  */
 
 const DEBANK_BASE = 'https://pro-openapi.debank.com/v1';
@@ -47,18 +47,6 @@ function flattenPositions(protocolList) {
       const rewardList = detail.reward_token_list || [];
       const borrowList = detail.borrow_token_list || [];
 
-      let minTimeAt = null;
-      for (const tok of [...supplyList, ...rewardList, ...borrowList]) {
-        const t = tok.time_at;
-        if (t && typeof t === 'number' && t > 0) {
-          if (minTimeAt == null || t < minTimeAt) minTimeAt = t;
-        }
-      }
-
-      const openedAtAuto = minTimeAt
-        ? new Date(minTimeAt * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z')
-        : null;
-
       const tokens = [];
       for (const tok of [...supplyList, ...rewardList]) {
         const amount = tok.amount ?? 0;
@@ -96,7 +84,6 @@ function flattenPositions(protocolList) {
         position_key: positionKey,
         tokens,
         total_usd: netUsd,
-        opened_at_auto: openedAtAuto,
       });
     }
   }
@@ -104,43 +91,9 @@ function flattenPositions(protocolList) {
   return positions.sort((a, b) => b.total_usd - a.total_usd);
 }
 
-function computeDerived(pos, manual, wallet) {
-  const openedAtManual = (manual?.opened_at_manual ?? manual?.openedAtManual ?? null) || null;
-  const initialDepositUsd = manual?.initial_deposit_usd ?? null;
-  const hasManualOpenedAt = openedAtManual != null && String(openedAtManual).trim() !== '';
-  const effective = (openedAtManual && String(openedAtManual).trim()) ? openedAtManual.trim() : null;
-
-  let daysOpen = null;
-  let profitUsd = null;
-  let apyPercent = null;
-
-  if (effective && initialDepositUsd != null && initialDepositUsd > 0) {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const effectiveSec = Math.floor(new Date(effective).getTime() / 1000);
-    daysOpen = Math.floor((nowSec - effectiveSec) / SEC_PER_DAY);
-    profitUsd = pos.total_usd - initialDepositUsd;
-    if (daysOpen > 0) {
-      const years = daysOpen / 365;
-      apyPercent = ((pos.total_usd / initialDepositUsd) ** (1 / years) - 1) * 100;
-    }
-  }
-
-  return {
-    ...pos,
-    wallet: wallet || pos.wallet,
-    opened_at_manual: openedAtManual,
-    has_manual_opened_at: hasManualOpenedAt,
-    opened_at_effective: effective,
-    days_open: daysOpen,
-    initial_deposit_usd: initialDepositUsd,
-    profit_usd: profitUsd,
-    apy_percent: apyPercent,
-  };
-}
-
 const { makePositionKvKey } = require('../lib/position-key');
 
-async function getManualOverride(wallet, pos) {
+async function getManualRecord(wallet, pos) {
   try {
     const { redisGet } = require('../lib/redis');
     const k = makePositionKvKey(wallet, pos.chain, pos.protocol_id, pos.position_type, pos.position_key);
@@ -192,16 +145,34 @@ module.exports = async function handler(req, res) {
 
     const positions = [];
     for (const p of rawPositions) {
-      try {
-        const manual = await getManualOverride(id, p);
-        const derived = computeDerived(p, manual, id);
-        if (manual) {
-          console.log('POSITION_WITH_MANUAL', { protocolId: p.protocol_id, positionKey: p.position_key, openedAtManual: manual?.opened_at_manual, openedAtEffective: derived.opened_at_effective });
+      const record = await getManualRecord(id, p);
+      const manualOpenedAt = (record?.openedAt ?? record?.opened_at_manual ?? null) || null;
+      const manualInitialUsd = record?.initialDepositUsd ?? record?.initial_deposit_usd ?? null;
+
+      let daysOpen = null;
+      let profitUsd = null;
+      let apyPercent = null;
+      if (manualOpenedAt && manualInitialUsd != null && manualInitialUsd > 0) {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const dateStr = String(manualOpenedAt).slice(0, 10);
+        const effectiveSec = Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000);
+        daysOpen = Math.floor((nowSec - effectiveSec) / SEC_PER_DAY);
+        profitUsd = p.total_usd - manualInitialUsd;
+        if (daysOpen > 0) {
+          const years = daysOpen / 365;
+          apyPercent = ((p.total_usd / manualInitialUsd) ** (1 / years) - 1) * 100;
         }
-        positions.push(derived);
-      } catch (e) {
-        positions.push(computeDerived(p, null, id));
       }
+
+      positions.push({
+        ...p,
+        wallet: id,
+        manualOpenedAt,
+        manualInitialUsd,
+        daysOpen,
+        profitUsd,
+        apyPercent,
+      });
     }
 
     res.setHeader('Cache-Control', 's-maxage=0, no-store, must-revalidate');

@@ -361,13 +361,13 @@ function bindPositionEdits(fmtUsd) {
   }
 
   function updateRowFromMerged(tr, merged) {
-    const showMetrics = merged.opened_at_effective && merged.initial_deposit_usd != null;
+    const showMetrics = merged.manualOpenedAt && merged.manualInitialUsd != null;
     tr.dataset.pos = JSON.stringify(merged);
-    tr.cells[5].textContent = merged.initial_deposit_usd != null ? fmtUsd(merged.initial_deposit_usd) : '—';
-    tr.cells[6].textContent = showMetrics && merged.profit_usd != null ? fmtUsd(merged.profit_usd) : '—';
-    tr.cells[7].textContent = showMetrics && merged.apy_percent != null ? merged.apy_percent.toFixed(2) + '%' : '—';
-    tr.cells[8].innerHTML = fmtDate(merged.opened_at_effective) + (merged.has_manual_opened_at ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : '');
-    tr.cells[9].textContent = showMetrics && merged.days_open != null ? String(merged.days_open) : '—';
+    tr.cells[5].textContent = merged.manualInitialUsd != null ? fmtUsd(merged.manualInitialUsd) : '—';
+    tr.cells[6].textContent = showMetrics && merged.profitUsd != null ? fmtUsd(merged.profitUsd) : '—';
+    tr.cells[7].textContent = showMetrics && merged.apyPercent != null ? merged.apyPercent.toFixed(2) + '%' : '—';
+    tr.cells[8].innerHTML = fmtDate(merged.manualOpenedAt) + (merged.manualOpenedAt ? ' <span style="color:var(--accent);font-size:10px;" title="Задано вручную">●</span>' : '');
+    tr.cells[9].textContent = showMetrics && merged.daysOpen != null ? String(merged.daysOpen) : '—';
   }
 
   wrap.addEventListener('click', (e) => {
@@ -381,8 +381,8 @@ function bindPositionEdits(fmtUsd) {
     tableWrap.dataset._editBase = base;
     tableWrap.dataset._editWallet = tableWrap.dataset.wallet || '';
     document.getElementById('modalTitle').textContent = (t[lang].modalTitle + ': ' + (pos.protocol_name || '')).trim();
-    modalDate.value = (pos.opened_at_effective || '').slice(0, 10);
-    modalInitial.value = pos.initial_deposit_usd != null ? String(pos.initial_deposit_usd) : '';
+    modalDate.value = (pos.manualOpenedAt ?? '').slice(0, 10);
+    modalInitial.value = pos.manualInitialUsd != null ? String(pos.manualInitialUsd) : '';
     modalStatus.textContent = '';
     modalStatus.className = 'modal-status';
     modal.classList.add('open');
@@ -410,8 +410,8 @@ function bindPositionEdits(fmtUsd) {
         protocol_id: pos.protocol_id,
         position_type: pos.position_type,
         position_key: pos.position_key || 'default',
-        opened_at_manual: dateVal || null,
-        initial_deposit_usd: initialVal ? Number(initialVal) : null
+        openedAt: dateVal || null,
+        initialDepositUsd: initialVal ? Number(initialVal) : null
       };
       const res = await fetch(base + '/api/defi-position-manual', {
         method: 'POST',
@@ -428,20 +428,19 @@ function bindPositionEdits(fmtUsd) {
         throw new Error(data.error || data.detail || ('Save failed: ' + res.status));
       }
       const saved = data;
-      const merged = { ...pos, opened_at_manual: saved.opened_at_manual, initial_deposit_usd: saved.initial_deposit_usd };
-      merged.has_manual_opened_at = merged.opened_at_manual != null;
-      merged.opened_at_effective = merged.opened_at_manual || null;
-      const eff = merged.opened_at_effective;
-      const init = merged.initial_deposit_usd;
+      const merged = { ...pos, manualOpenedAt: saved.openedAt ?? null, manualInitialUsd: saved.initialDepositUsd ?? null };
+      const init = merged.manualInitialUsd;
+      const eff = merged.manualOpenedAt;
       if (eff && init != null && init > 0) {
         const nowSec = Math.floor(Date.now() / 1000);
-        merged.days_open = Math.floor((nowSec - Math.floor(new Date(eff).getTime() / 1000)) / 86400);
-        merged.profit_usd = pos.total_usd - init;
-        merged.apy_percent = merged.days_open > 0 ? ((pos.total_usd / init) ** (365 / merged.days_open) - 1) * 100 : null;
+        const dateStr = String(eff).slice(0, 10);
+        merged.daysOpen = Math.floor((nowSec - Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000)) / 86400);
+        merged.profitUsd = pos.total_usd - init;
+        merged.apyPercent = merged.daysOpen > 0 ? ((pos.total_usd / init) ** (365 / merged.daysOpen) - 1) * 100 : null;
       } else {
-        merged.days_open = null;
-        merged.profit_usd = null;
-        merged.apy_percent = null;
+        merged.daysOpen = null;
+        merged.profitUsd = null;
+        merged.apyPercent = null;
       }
       updateRowFromMerged(currentTr, merged);
       modalStatus.textContent = t[lang].modalSaved;
@@ -569,14 +568,13 @@ async function loadAssets() {
         const tokensStr = pos.tokens && pos.tokens.length
           ? pos.tokens.slice(0, 5).map((t) => t.symbol).join(', ')
           : '—';
-        const openedAt = fmtDate(pos.opened_at_effective);
-        const hasManual = pos.has_manual_opened_at;
-        const showMetrics = pos.opened_at_effective && pos.initial_deposit_usd != null;
-        const daysOpen = showMetrics && pos.days_open != null ? String(pos.days_open) : '—';
-        const initialVal = pos.initial_deposit_usd != null ? pos.initial_deposit_usd : '';
-        const initialDisplay = pos.initial_deposit_usd != null ? fmtUsd(pos.initial_deposit_usd) : '—';
-        const profitVal = showMetrics && pos.profit_usd != null ? fmtUsd(pos.profit_usd) : '—';
-        const apyVal = showMetrics && pos.apy_percent != null ? pos.apy_percent.toFixed(2) + '%' : '—';
+        const openedAt = pos.manualOpenedAt ? fmtDate(pos.manualOpenedAt) : '—';
+        const hasManual = !!pos.manualOpenedAt;
+        const showMetrics = pos.manualOpenedAt && pos.manualInitialUsd != null;
+        const daysOpen = showMetrics && pos.daysOpen != null ? String(pos.daysOpen) : '—';
+        const initialDisplay = pos.manualInitialUsd != null ? fmtUsd(pos.manualInitialUsd) : '—';
+        const profitVal = showMetrics && pos.profitUsd != null ? fmtUsd(pos.profitUsd) : '—';
+        const apyVal = showMetrics && pos.apyPercent != null ? pos.apyPercent.toFixed(2) + '%' : '—';
         const editBtnText = lang === 'ru' ? '✏️ Изменить' : '✏️ Edit';
         tr.innerHTML = `
           <td>
