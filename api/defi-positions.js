@@ -138,16 +138,12 @@ function computeDerived(pos, manual, wallet) {
   };
 }
 
-function makeKvKey(wallet, chain, protocolId, positionType, positionKey) {
-  const clean = (s) => (s || '').replace(/[^a-zA-Z0-9:_.-]/g, '_');
-  const id = [chain, protocolId, positionType, positionKey || 'default'].map(clean).join(':');
-  return `wallet:${wallet}:position:${id}`;
-}
+const { makePositionKvKey } = require('../lib/position-key');
 
 async function getManualOverride(wallet, pos) {
   try {
     const { redisGet } = require('../lib/redis');
-    const k = makeKvKey(wallet, pos.chain, pos.protocol_id, pos.position_type, pos.position_key);
+    const k = makePositionKvKey(wallet, pos.chain, pos.protocol_id, pos.position_type, pos.position_key);
     return await redisGet(k);
   } catch {
     return null;

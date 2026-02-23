@@ -1,19 +1,10 @@
 /**
  * POST /api/defi-position-manual
- * Сохраняет ручные значения для DeFi позиции в Redis (REDIS_URL).
- * Ключ: wallet:{wallet}:position:{positionId}
+ * Сохраняет ручные значения для DeFi позиции в Redis/KV.
  */
 
 const { redisGet, redisSet } = require('../lib/redis');
-
-function makePositionId(chain, protocolId, positionType, positionKey) {
-  const clean = (s) => (s || '').replace(/[^a-zA-Z0-9:_.-]/g, '_');
-  return [chain, protocolId, positionType, positionKey].map(clean).join(':');
-}
-
-function makeKvKey(wallet) {
-  return `wallet:${wallet.toLowerCase()}`;
-}
+const { makePositionKvKey } = require('../lib/position-key');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -45,8 +36,7 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'chain, protocol_id, position_type required' });
   }
 
-  const positionId = makePositionId(chain, protocolId, positionType, positionKey);
-  const kvKey = `${makeKvKey(wallet)}:position:${positionId}`;
+  const kvKey = makePositionKvKey(wallet, chain, protocolId, positionType, positionKey);
 
   let openedAtManual = body.opened_at_manual;
   if (openedAtManual) {

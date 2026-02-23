@@ -436,7 +436,8 @@ function bindPositionEdits(fmtUsd) {
       updateRowFromMerged(currentTr, merged);
       modalStatus.textContent = t[lang].modalSaved;
       modalStatus.className = 'modal-status success';
-      setTimeout(closeModal, 800);
+      closeModal();
+      loadAssets();
     } catch (err) {
       modalStatus.textContent = (t[lang].modalError + ': ' + (err.message || err));
       modalStatus.className = 'modal-status error';
