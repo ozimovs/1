@@ -91,22 +91,30 @@
 
   @media (max-width: 767px) {
     .defi-table-wrap thead { display: none; }
-    .defi-table-wrap table, .defi-table-wrap tbody, .defi-table-wrap tr, .defi-table-wrap td { display: block; }
-    .defi-table-wrap tr { border: 1px solid var(--border); margin-bottom: 12px; border-radius: 8px; padding: 12px; background: var(--surface2); }
-    .defi-table-wrap td { border: none; padding: 6px 0; white-space: normal; overflow: visible; text-overflow: clip; }
+    .defi-table-wrap table, .defi-table-wrap tbody { display: block; }
+    .defi-table-wrap tr { display: flex; flex-wrap: wrap; gap: 0 12px; align-items: flex-start; border: 1px solid var(--border); margin-bottom: 12px; border-radius: 8px; padding: 12px; background: var(--surface2); }
+    .defi-table-wrap td { display: block; border: none; padding: 6px 0; white-space: normal; overflow: visible; text-overflow: clip; flex: 1 1 100%; }
+    .defi-table-wrap td.col-protocol { flex: 1 1 calc(100% - 50px); order: 0; }
+    .defi-table-wrap td.col-status { flex: 0 0 auto; order: 1; padding-top: 0; }
+    .defi-table-wrap td.col-status::before { margin-bottom: 0; }
+    .defi-table-wrap td.col-status .status-badge { margin-left: 0; }
+    .defi-table-wrap td:not(.col-protocol):not(.col-status):not(.col-edit) { order: 2; }
+    .defi-table-wrap td.col-edit { order: 3; }
     .defi-table-wrap td::before { content: attr(data-label); font-size: 10px; color: var(--muted2); text-transform: uppercase; display: block; margin-bottom: 2px; }
     .defi-table-wrap td.text-right { text-align: left; }
-    .defi-table-wrap td.col-edit { padding-top: 10px; border-top: 1px solid var(--border); margin-top: 6px; }
+    .defi-table-wrap td.col-edit { flex: 1 1 100%; padding-top: 10px; border-top: 1px solid var(--border); margin-top: 6px; }
     .defi-table-wrap td.col-edit::before { display: none; }
+    .asset-distribution-card { flex-direction: column; align-items: flex-start; }
     .asset-donut-wrap { width: 120px; height: 120px; }
-    .asset-legend { font-size: 10px; gap: 4px 10px; }
+    .asset-legend { flex-direction: column; font-size: 10px; gap: 4px; max-width: 180px; }
   }
 
   @media (max-width: 413px) {
     body { padding: 16px; }
     .defi-block { padding: 16px; }
     .asset-donut-wrap { width: 100px; height: 100px; }
-    .asset-legend { font-size: 9px; }
+    .asset-donut-center .center-value { font-size: 10px; }
+    .asset-legend { font-size: 9px; max-width: 160px; }
   }
   .table-wrap {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; overflow-y: visible;
@@ -160,27 +168,40 @@
   .modal-box .form-group label { display: block; margin-bottom: 6px; font-size: 11px; color: var(--muted2); text-transform: uppercase; }
   .modal-box input, .modal-box select { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; box-sizing: border-box; }
   .modal-box input:focus, .modal-box select:focus { outline: none; border-color: var(--accent); }
-  .status-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
-  .status-badge.open { background: rgba(52,211,153,0.2); color: var(--status-open); }
-  .status-badge.close { background: rgba(148,163,184,0.25); color: var(--status-close); }
+  .status-badge { display: inline-block; padding: 1px 4px; border-radius: 10px; font-size: 9px; font-weight: 600; text-transform: lowercase; white-space: nowrap; }
+  .status-badge.open { background: var(--status-open); color: #fff; }
+  .status-badge.close { background: rgba(148,163,184,0.35); color: var(--text); }
+  .defi-table-wrap .col-status { width: 4.5%; min-width: 44px; text-align: center; }
+  .defi-table-wrap td.col-status { text-align: center; padding-left: 4px; padding-right: 4px; }
   .defi-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; overflow-x: hidden; max-width: 100%; }
   .defi-block .section-title { margin-bottom: 16px; font-size: 17px; }
   .asset-distribution-wrap { margin-bottom: 20px; }
   .asset-distribution-title { font-size: 12px; color: var(--muted2); margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
   .asset-distribution-card {
-    display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: flex-start; max-width: 100%;
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: flex-start;
+    width: fit-content; max-width: 100%;
   }
-  .asset-donut-wrap { position: relative; width: 140px; height: 140px; flex-shrink: 0; max-width: 100%; }
+  .asset-donut-wrap { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
   .asset-donut { width: 100%; height: 100%; border-radius: 50%; transition: filter 0.15s; }
   .asset-donut-wrap:hover .asset-donut { filter: brightness(1.05); }
   .asset-donut-hole {
     position: absolute; top: 50%; left: 50%; width: 52%; height: 52%;
     transform: translate(-50%, -50%); background: var(--surface); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
   }
-  .asset-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11px; color: var(--text); max-width: 100%; min-width: 0; }
+  .asset-donut-center {
+    font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; color: var(--accent);
+    text-align: center; line-height: 1.2; padding: 4px; max-width: 100%;
+  }
+  .asset-donut-center .center-label { font-size: 9px; font-weight: 600; color: var(--muted2); text-transform: uppercase; }
+  .asset-donut-center .center-value { font-size: 12px; }
+  .asset-legend {
+    display: flex; flex-direction: column; gap: 4px; font-size: 10px; color: var(--text);
+    min-width: 90px; max-width: 140px;
+  }
   .asset-legend-item { display: flex; align-items: center; gap: 6px; cursor: help; padding: 2px 0; transition: opacity 0.15s; }
   .asset-legend-item:hover { opacity: 0.85; }
-  .asset-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .asset-legend-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
   .modal-actions .btn { flex: 1; }
   .modal-status { margin-top: 12px; font-size: 13px; min-height: 20px; }
@@ -225,7 +246,9 @@
       <div class="asset-distribution-card">
         <div class="asset-donut-wrap">
           <div class="asset-donut" id="assetDonut"></div>
-          <div class="asset-donut-hole"></div>
+          <div class="asset-donut-hole">
+            <div class="asset-donut-center" id="assetDonutCenter"></div>
+          </div>
         </div>
         <div class="asset-legend" id="assetLegend"></div>
       </div>
@@ -248,7 +271,7 @@
             <th class="text-right col-num" id="thPosProfit">Прибыль</th>
             <th class="text-right col-num" id="thPosRoi">ROI</th>
             <th class="text-right col-num" id="thPosApy">APY</th>
-            <th class="text-left" id="thPosStatus">Статус</th>
+            <th class="text-left col-status" id="thPosStatus">Сост.</th>
             <th class="col-edit"></th>
           </tr>
         </thead>
@@ -332,8 +355,8 @@ const t = {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
-    thPosProtocol: 'Протокол', thPosDateOpen: 'Откр.', thPosInitial: 'Внесено $', thPosDays: 'Дней', thPosUsd: 'Стоимость $', thPosUpdated: 'Обновл.', thPosWithdrawn: 'Выведено $', thPosProfit: 'Прибыль $', thPosRoi: 'ROI', thPosApy: 'APY', thPosStatus: 'Состояние',
-    assetDistributionTitle: 'Распределение активов',
+    thPosProtocol: 'Протокол', thPosDateOpen: 'Откр.', thPosInitial: 'Внесено $', thPosDays: 'Дней', thPosUsd: 'Стоимость $', thPosUpdated: 'Обновл.', thPosWithdrawn: 'Выведено $', thPosProfit: 'Прибыль $', thPosRoi: 'ROI', thPosApy: 'APY', thPosStatus: 'Сост.',
+    assetDistributionTitle: 'Распределение активов', lblOthers: 'Другие', lblTotalValue: 'Сумма',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций',
@@ -349,13 +372,13 @@ const t = {
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
     thPosProtocol: 'Protocol', thPosDateOpen: 'Open', thPosInitial: 'Deposit $', thPosDays: 'Days', thPosUsd: 'Value $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn $', thPosProfit: 'Profit $', thPosRoi: 'ROI', thPosApy: 'APY',
-    assetDistributionTitle: 'Asset distribution',
+    assetDistributionTitle: 'Asset distribution', lblOthers: 'Others', lblTotalValue: 'Total',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions',
     apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.',
     apiHint: 'If load fails: open debank.html?api=https://your-vercel.vercel.app',
-    thPosStatus: 'Status',
+    thPosStatus: 'St.',
     modalTitle: 'Edit position', modalLblDate: 'Date opened (DD.MM.YYYY)', modalLblInitial: 'Initial amount, USD',
     modalLblWithdrawn: 'Withdrawn, USD', modalLblStatus: 'Status',
     modalCancel: 'Cancel', modalSave: 'Save', modalSaving: 'Saving...', modalSaved: 'Saved',
@@ -364,6 +387,7 @@ const t = {
 };
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
 let theme = localStorage.getItem(THEME_KEY) || 'dark';
+let lastAssetPositions = null;
 
 function setTheme(v) {
   theme = v; localStorage.setItem(THEME_KEY, v);
@@ -409,6 +433,7 @@ function setLang(v) {
   });
   const editBtns = document.querySelectorAll('.edit-row-btn');
   editBtns.forEach(b => b.textContent = t[lang].editBtn);
+  if (lastAssetPositions && lastAssetPositions.length > 0) renderAssetChart(lastAssetPositions);
 }
 function fmt(n) {
   if (n == null || isNaN(n)) return '—';
@@ -455,14 +480,14 @@ function computeAssetDistribution(positions) {
     .filter(([, usd]) => Math.abs(usd) >= 0.01)
     .map(([symbol, usd]) => ({ symbol, usd, pct: totalDeFiUsd > 0.01 ? (usd / totalDeFiUsd) * 100 : 0 }))
     .sort((a, b) => Math.abs(b.usd) - Math.abs(a.usd));
-  const topN = 10;
+  const topN = 8;
   if (assets.length > topN) {
     const top = assets.slice(0, topN);
     const rest = assets.slice(topN);
     const othersUsd = rest.reduce((s, a) => s + a.usd, 0);
     const othersPct = totalDeFiUsd > 0.01 ? (othersUsd / totalDeFiUsd) * 100 : 0;
     if (Math.abs(othersPct) >= 0.05) {
-      assets = [...top, { symbol: 'Others', usd: othersUsd, pct: othersPct }];
+      assets = [...top, { symbol: 'Others', usd: othersUsd, pct: othersPct, isOthers: true }];
     } else {
       assets = top;
     }
@@ -474,8 +499,9 @@ function renderAssetChart(positions) {
   const wrap = document.getElementById('assetDistributionWrap');
   const donut = document.getElementById('assetDonut');
   const legend = document.getElementById('assetLegend');
+  const centerEl = document.getElementById('assetDonutCenter');
   const titleEl = document.getElementById('assetDistributionTitle');
-  if (!wrap || !donut || !legend) return;
+  if (!wrap || !donut || !legend || !centerEl) return;
   const { totalDeFiUsd, assets } = computeAssetDistribution(positions);
   const positiveAssets = assets.filter((a) => a.pct > 0.05);
   if (positiveAssets.length === 0 || totalDeFiUsd < 0.01) {
@@ -494,14 +520,29 @@ function renderAssetChart(positions) {
   donut.style.background = parts.length ? `conic-gradient(${parts.join(', ')})` : 'var(--surface2)';
   const posIdx = {};
   positiveAssets.forEach((a, i) => { posIdx[a.symbol] = i; });
-  const legendItems = assets.filter((a) => Math.abs(a.pct) >= 0.1).map((a, i) => {
+
+  function setCenter(label, value) {
+    centerEl.innerHTML = `<span class="center-label">${label}</span><br><span class="center-value">${value}</span>`;
+  }
+  setCenter(t[lang].lblTotalValue, fmtUsd(totalDeFiUsd));
+
+  const displayAssets = assets.filter((a) => Math.abs(a.pct) >= 0.05);
+  const legendItems = displayAssets.map((a, i) => {
     const idx = posIdx[a.symbol] ?? i;
     const color = ASSET_CHART_COLORS[idx % ASSET_CHART_COLORS.length];
     const pctStr = a.pct.toFixed(1).replace('.', lang === 'ru' ? ',' : '.');
     const usdStr = fmtUsd(Math.abs(a.usd));
-    return `<div class="asset-legend-item" title="${a.symbol}: ${usdStr} (${pctStr}%)"><span class="asset-legend-dot" style="background:${color}"></span><span>${a.symbol} ${pctStr}%</span></div>`;
+    const label = a.isOthers ? t[lang].lblOthers : a.symbol;
+    return { html: `<div class="asset-legend-item" data-symbol="${label}" data-pct="${pctStr}" data-usd="${usdStr}" title="${label}: ${usdStr} (${pctStr}%)"><span class="asset-legend-dot" style="background:${color}"></span><span>${label} ${pctStr}%</span></div>`, label, pctStr, usdStr };
   });
-  legend.innerHTML = legendItems.join('');
+  legend.innerHTML = legendItems.map((x) => x.html).join('');
+
+  legend.querySelectorAll('.asset-legend-item').forEach((el, i) => {
+    const d = legendItems[i];
+    if (!d) return;
+    el.addEventListener('mouseenter', () => { setCenter(d.label, `${d.pctStr}% · ${d.usdStr}`); });
+    el.addEventListener('mouseleave', () => { setCenter(t[lang].lblTotalValue, fmtUsd(totalDeFiUsd)); });
+  });
 }
 function fmtUsd(n) {
   if (n == null || isNaN(n) || n < 0.01) return '$0';
@@ -774,6 +815,7 @@ async function loadAssets() {
     document.getElementById('sectionTokens').style.display = 'block';
     document.getElementById('defiSkeleton').style.display = 'none';
 
+    lastAssetPositions = positionsList;
     renderAssetChart(positionsList);
 
     const positionsTableWrap = document.getElementById('positionsTableWrap');
@@ -817,7 +859,7 @@ async function loadAssets() {
           <td class="text-right col-num ${profitClass}" data-label="${lbl('Прибыль','Profit')}">${profitDisplay}</td>
           <td class="text-right col-num ${roiClass}" data-label="ROI">${roiDisplay}</td>
           <td class="text-right col-num ${apyClass}" data-label="APY">${apyDisplay}</td>
-          <td class="text-left" data-label="${lbl('Состояние','Status')}"><span class="status-badge ${statusClass}">${statusText}</span></td>
+          <td class="text-left col-status" data-label="${lbl('Состояние','Status')}"><span class="status-badge ${statusClass}">${statusText}</span></td>
           <td class="col-edit"><button class="edit-row-btn" type="button" title="${lbl('Редактировать','Edit')}">${editBtnText}</button></td>
         `;
         positionsTableBody.appendChild(tr);
