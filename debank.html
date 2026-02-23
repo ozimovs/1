@@ -104,17 +104,19 @@
     .defi-table-wrap td.text-right { text-align: left; }
     .defi-table-wrap td.col-edit { flex: 1 1 100%; padding-top: 10px; border-top: 1px solid var(--border); margin-top: 6px; }
     .defi-table-wrap td.col-edit::before { display: none; }
-    .asset-distribution-card { flex-direction: column; align-items: flex-start; }
-    .asset-donut-wrap { width: 120px; height: 120px; }
-    .asset-legend { flex-direction: column; font-size: 10px; gap: 4px; max-width: 180px; }
+    .asset-distribution-card { flex-direction: column; align-items: center; max-width: 100%; padding: 16px; }
+    .asset-donut-wrap { width: 150px; height: 150px; }
+    .asset-donut-center .center-value { font-size: 14px; }
+    .asset-legend { flex-direction: column; font-size: 11px; gap: 6px; max-width: 100%; min-width: 180px; align-self: stretch; }
   }
 
   @media (max-width: 413px) {
     body { padding: 16px; }
     .defi-block { padding: 16px; }
-    .asset-donut-wrap { width: 100px; height: 100px; }
-    .asset-donut-center .center-value { font-size: 10px; }
-    .asset-legend { font-size: 9px; max-width: 160px; }
+    .asset-donut-wrap { width: 130px; height: 130px; }
+    .asset-donut-center .center-value { font-size: 13px; }
+    .asset-legend { font-size: 11px; min-width: 140px; }
+    .asset-legend-symbol { max-width: 100px; }
   }
   .table-wrap {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; overflow-y: visible;
@@ -176,32 +178,36 @@
   .defi-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; overflow-x: hidden; max-width: 100%; }
   .defi-block .section-title { margin-bottom: 16px; font-size: 17px; }
   .asset-distribution-wrap { margin-bottom: 20px; }
-  .asset-distribution-title { font-size: 12px; color: var(--muted2); margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .asset-distribution-title { font-size: 12px; color: var(--muted2); margin-bottom: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
   .asset-distribution-card {
-    display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: flex-start;
-    width: fit-content; max-width: 100%;
+    display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; justify-content: flex-start;
+    width: fit-content; max-width: 45%; padding: 20px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
-  .asset-donut-wrap { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+  [data-theme="light"] .asset-distribution-card { box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .asset-donut-wrap { position: relative; width: 180px; height: 180px; flex-shrink: 0; }
   .asset-donut { width: 100%; height: 100%; border-radius: 50%; transition: filter 0.15s; }
-  .asset-donut-wrap:hover .asset-donut { filter: brightness(1.05); }
+  .asset-donut-wrap:hover .asset-donut { filter: brightness(1.06); }
   .asset-donut-hole {
     position: absolute; top: 50%; left: 50%; width: 52%; height: 52%;
     transform: translate(-50%, -50%); background: var(--surface); border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
+    display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
   }
+  [data-theme="light"] .asset-donut-hole { box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04); }
   .asset-donut-center {
-    font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; color: var(--accent);
-    text-align: center; line-height: 1.2; padding: 4px; max-width: 100%;
+    font-family: 'Space Mono', monospace; font-weight: 700; color: var(--text);
+    text-align: center; line-height: 1.25; padding: 6px; max-width: 100%;
   }
-  .asset-donut-center .center-label { font-size: 9px; font-weight: 600; color: var(--muted2); text-transform: uppercase; }
-  .asset-donut-center .center-value { font-size: 12px; }
+  .asset-donut-center .center-label { font-size: 10px; font-weight: 600; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px; }
+  .asset-donut-center .center-value { font-size: 18px; color: var(--accent); font-weight: 800; }
   .asset-legend {
-    display: flex; flex-direction: column; gap: 4px; font-size: 10px; color: var(--text);
-    min-width: 90px; max-width: 140px;
+    display: flex; flex-direction: column; gap: 8px; font-size: 11px; color: var(--text);
+    min-width: 110px; max-width: 160px;
   }
-  .asset-legend-item { display: flex; align-items: center; gap: 6px; cursor: help; padding: 2px 0; transition: opacity 0.15s; }
-  .asset-legend-item:hover { opacity: 0.85; }
-  .asset-legend-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .asset-legend-item { display: flex; align-items: center; gap: 8px; cursor: help; padding: 3px 0; transition: opacity 0.15s; min-height: 20px; }
+  .asset-legend-item:hover { opacity: 0.9; }
+  .asset-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .asset-legend-symbol { font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
+  .asset-legend-pct { color: var(--muted2); font-weight: 600; flex-shrink: 0; }
   .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
   .modal-actions .btn { flex: 1; }
   .modal-status { margin-top: 12px; font-size: 13px; min-height: 20px; }
@@ -356,7 +362,7 @@ const t = {
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
     thPosProtocol: 'Протокол', thPosDateOpen: 'Откр.', thPosInitial: 'Внесено $', thPosDays: 'Дней', thPosUsd: 'Стоимость $', thPosUpdated: 'Обновл.', thPosWithdrawn: 'Выведено $', thPosProfit: 'Прибыль $', thPosRoi: 'ROI', thPosApy: 'APY', thPosStatus: 'Сост.',
-    assetDistributionTitle: 'Распределение активов', lblOthers: 'Другие', lblTotalValue: 'Сумма',
+    assetDistributionTitle: 'Распределение активов', lblOthers: 'Другие', lblTotalValue: 'Сумма', lblDeFiPortfolio: 'DeFi портфель',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций',
@@ -372,7 +378,7 @@ const t = {
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
     thPosProtocol: 'Protocol', thPosDateOpen: 'Open', thPosInitial: 'Deposit $', thPosDays: 'Days', thPosUsd: 'Value $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn $', thPosProfit: 'Profit $', thPosRoi: 'ROI', thPosApy: 'APY',
-    assetDistributionTitle: 'Asset distribution', lblOthers: 'Others', lblTotalValue: 'Total',
+    assetDistributionTitle: 'Asset distribution', lblOthers: 'Others', lblTotalValue: 'Total', lblDeFiPortfolio: 'DeFi portfolio',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions',
@@ -460,7 +466,8 @@ function fmtApy(v) {
   if (v == null || isNaN(v)) return '—';
   return Math.round(v) + '%';
 }
-const ASSET_CHART_COLORS = ['#34d399','#60a5fa','#a78bfa','#38bdf8','#fbbf24','#94a3b8','#f472b6'];
+const ASSET_CHART_COLORS = ['#34d399','#60a5fa','#a78bfa','#38bdf8','#fbbf24','#f472b6','#22d3ee'];
+const ASSET_CHART_COLORS_MUTED = ['#64748b','#94a3b8','#a1a1aa'];
 
 function computeAssetDistribution(positions) {
   const bySymbol = {};
@@ -511,10 +518,11 @@ function renderAssetChart(positions) {
   wrap.style.display = 'block';
   if (titleEl) titleEl.textContent = t[lang].assetDistributionTitle;
   let acc = 0;
+  const primaryCount = 7;
   const parts = positiveAssets.map((a, i) => {
     const start = acc;
     acc += a.pct;
-    const color = ASSET_CHART_COLORS[i % ASSET_CHART_COLORS.length];
+    const color = i < primaryCount ? ASSET_CHART_COLORS[i % ASSET_CHART_COLORS.length] : ASSET_CHART_COLORS_MUTED[(i - primaryCount) % ASSET_CHART_COLORS_MUTED.length];
     return `${color} ${start.toFixed(2)}% ${acc.toFixed(2)}%`;
   });
   donut.style.background = parts.length ? `conic-gradient(${parts.join(', ')})` : 'var(--surface2)';
@@ -524,16 +532,18 @@ function renderAssetChart(positions) {
   function setCenter(label, value) {
     centerEl.innerHTML = `<span class="center-label">${label}</span><br><span class="center-value">${value}</span>`;
   }
-  setCenter(t[lang].lblTotalValue, fmtUsd(totalDeFiUsd));
+  setCenter(t[lang].lblDeFiPortfolio, fmtUsd(totalDeFiUsd));
 
   const displayAssets = assets.filter((a) => Math.abs(a.pct) >= 0.05);
   const legendItems = displayAssets.map((a, i) => {
     const idx = posIdx[a.symbol] ?? i;
-    const color = ASSET_CHART_COLORS[idx % ASSET_CHART_COLORS.length];
+    const color = idx < primaryCount ? ASSET_CHART_COLORS[idx % ASSET_CHART_COLORS.length] : ASSET_CHART_COLORS_MUTED[(idx - primaryCount) % ASSET_CHART_COLORS_MUTED.length];
     const pctStr = a.pct.toFixed(1).replace('.', lang === 'ru' ? ',' : '.');
     const usdStr = fmtUsd(Math.abs(a.usd));
     const label = a.isOthers ? t[lang].lblOthers : a.symbol;
-    return { html: `<div class="asset-legend-item" data-symbol="${label}" data-pct="${pctStr}" data-usd="${usdStr}" title="${label}: ${usdStr} (${pctStr}%)"><span class="asset-legend-dot" style="background:${color}"></span><span>${label} ${pctStr}%</span></div>`, label, pctStr, usdStr };
+    const labelEsc = label.replace(/"/g, '&quot;');
+    const shortLabel = label.length > 10 ? label.slice(0, 8) + '…' : label;
+    return { html: `<div class="asset-legend-item" data-symbol="${labelEsc}" data-pct="${pctStr}" data-usd="${usdStr}" title="${labelEsc}: ${usdStr} (${pctStr}%)"><span class="asset-legend-dot" style="background:${color}"></span><span class="asset-legend-symbol">${shortLabel}</span><span class="asset-legend-pct">${pctStr}%</span></div>`, label, pctStr, usdStr };
   });
   legend.innerHTML = legendItems.map((x) => x.html).join('');
 
@@ -541,7 +551,7 @@ function renderAssetChart(positions) {
     const d = legendItems[i];
     if (!d) return;
     el.addEventListener('mouseenter', () => { setCenter(d.label, `${d.pctStr}% · ${d.usdStr}`); });
-    el.addEventListener('mouseleave', () => { setCenter(t[lang].lblTotalValue, fmtUsd(totalDeFiUsd)); });
+    el.addEventListener('mouseleave', () => { setCenter(t[lang].lblDeFiPortfolio, fmtUsd(totalDeFiUsd)); });
   });
 }
 function fmtUsd(n) {
