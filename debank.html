@@ -342,7 +342,6 @@ function bindPositionEdits(fmtUsd, onSave) {
           }
           const showMetrics = merged.opened_at_effective && merged.initial_deposit_usd != null;
           tr.dataset.pos = JSON.stringify(merged);
-          const showMetrics = merged.opened_at_effective && merged.initial_deposit_usd != null;
           tr.cells[5].textContent = merged.initial_deposit_usd != null ? fmtUsd(merged.initial_deposit_usd) : '—';
           tr.cells[6].textContent = showMetrics && merged.profit_usd != null ? fmtUsd(merged.profit_usd) : '—';
           tr.cells[7].textContent = showMetrics && merged.apy_percent != null ? merged.apy_percent.toFixed(2) + '%' : '—';
@@ -385,10 +384,16 @@ async function loadAssets() {
 
   let base = new URLSearchParams(location.search).get('api');
   if (!base) {
-    base = window.location.origin;
-    if (window.location.hostname.includes('github.io')) base = VERCEL_API;
+    const origin = window.location.origin;
+    if (!origin || origin === 'null' || origin.startsWith('file:')) {
+      base = VERCEL_API;
+    } else if (window.location.hostname.includes('github.io')) {
+      base = VERCEL_API;
+    } else {
+      base = origin;
+    }
   }
-  base = base.replace(/\/$/, '');
+  base = String(base).replace(/\/$/, '') || VERCEL_API;
   const addrLower = addr.toLowerCase();
 
   try {
@@ -408,14 +413,20 @@ async function loadAssets() {
     let balance, tokens, positions;
     try {
       balance = await balanceRes.json();
-      tokens = await tokenRes.json();
-      positions = await positionsRes.json();
-    } catch (parseErr) {
-      loadingEl.style.display = 'none';
-      errorEl.textContent = t[lang].apiUnavailable;
-      errorEl.style.display = 'block';
-      return;
+    } catch {
+      balance = { error: 'Parse error' };
     }
+    try {
+      tokens = await tokenRes.json();
+    } catch {
+      tokens = [];
+    }
+    try {
+      positions = positionsRes.ok ? await positionsRes.json() : [];
+    } catch {
+      positions = [];
+    }
+    if (!Array.isArray(positions)) positions = [];
 
     loadingEl.style.display = 'none';
 

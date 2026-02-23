@@ -145,8 +145,8 @@ function makeKvKey(wallet, chain, protocolId, positionType, positionKey) {
 }
 
 async function getManualOverride(wallet, pos) {
-  const { redisGet } = require('../lib/redis');
   try {
+    const { redisGet } = require('../lib/redis');
     const k = makeKvKey(wallet, pos.chain, pos.protocol_id, pos.position_type, pos.position_key);
     return await redisGet(k);
   } catch {
@@ -196,8 +196,12 @@ module.exports = async function handler(req, res) {
 
     const positions = [];
     for (const p of rawPositions) {
-      const manual = await getManualOverride(id, p);
-      positions.push(computeDerived(p, manual, id));
+      try {
+        const manual = await getManualOverride(id, p);
+        positions.push(computeDerived(p, manual, id));
+      } catch (e) {
+        positions.push(computeDerived(p, null, id));
+      }
     }
 
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
