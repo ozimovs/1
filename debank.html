@@ -407,9 +407,8 @@ function bindPositionEdits(fmtUsd) {
       const payload = {
         wallet,
         chain: pos.chain,
-        protocol_id: pos.protocol_id,
-        position_type: pos.position_type,
-        position_key: pos.position_key || 'default',
+        protocolId: pos.protocol_id,
+        positionKey: pos.position_key || 'default',
         openedAt: dateVal || null,
         initialDepositUsd: initialVal ? Number(initialVal) : null
       };

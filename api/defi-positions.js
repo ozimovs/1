@@ -1,6 +1,6 @@
 /**
  * DeFi позиции по кошельку. DeBank + ручные данные из Redis.
- * Одно поле даты: manualOpenedAt.
+ * Ключ Redis: manual:{wallet}:{chain}:{protocolId}:{positionKey}
  */
 
 const DEBANK_BASE = 'https://pro-openapi.debank.com/v1';
@@ -91,12 +91,12 @@ function flattenPositions(protocolList) {
   return positions.sort((a, b) => b.total_usd - a.total_usd);
 }
 
-const { makePositionKvKey } = require('../lib/position-key');
+const { makeManualKey } = require('../lib/position-key');
 
 async function getManualRecord(wallet, pos) {
   try {
     const { redisGet } = require('../lib/redis');
-    const k = makePositionKvKey(wallet, pos.chain, pos.protocol_id, pos.position_type, pos.position_key);
+    const k = makeManualKey(wallet, pos.chain, pos.protocol_id, pos.position_key);
     return await redisGet(k);
   } catch {
     return null;
@@ -145,9 +145,9 @@ module.exports = async function handler(req, res) {
 
     const positions = [];
     for (const p of rawPositions) {
-      const record = await getManualRecord(id, p);
-      const manualOpenedAt = (record?.openedAt ?? record?.opened_at_manual ?? null) || null;
-      const manualInitialUsd = record?.initialDepositUsd ?? record?.initial_deposit_usd ?? null;
+      const manual = await getManualRecord(id, p);
+      const manualOpenedAt = manual?.openedAt ?? manual?.opened_at_manual ?? null;
+      const manualInitialUsd = manual?.initialDepositUsd ?? manual?.initial_deposit_usd ?? null;
 
       let daysOpen = null;
       let profitUsd = null;
@@ -167,8 +167,8 @@ module.exports = async function handler(req, res) {
       positions.push({
         ...p,
         wallet: id,
-        manualOpenedAt,
-        manualInitialUsd,
+        manualOpenedAt: manualOpenedAt || null,
+        manualInitialUsd: manualInitialUsd ?? null,
         daysOpen,
         profitUsd,
         apyPercent,
