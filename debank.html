@@ -121,6 +121,7 @@
   .status-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
   .status-badge.open { background: rgba(0,229,160,0.2); color: var(--accent); }
   .status-badge.close { background: rgba(113,128,150,0.3); color: var(--muted2); }
+  .assets-cell-wrap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; }
   .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
   .modal-actions .btn { flex: 1; }
   .modal-status { margin-top: 12px; font-size: 13px; min-height: 20px; }
@@ -164,6 +165,7 @@
       <thead>
         <tr>
           <th id="thPosProtocol">DeFi‑протокол</th>
+          <th id="thPosAssets">Активы</th>
           <th id="thPosDateOpen">Дата откр.</th>
           <th id="thPosInitial">Сумма внесена, $</th>
           <th id="thPosDays">Дней в позиц.</th>
@@ -256,7 +258,7 @@ const t = {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
-    thPosProtocol: 'DeFi‑протокол', thPosDateOpen: 'Дата откр.', thPosInitial: 'Сумма внесена, $', thPosDays: 'Дней в позиц.', thPosUsd: 'Текущая стоимость, $', thPosUpdated: 'Дата обновл.', thPosWithdrawn: 'Выведено, $', thPosProfit: 'Прибыль, $', thPosRoi: 'Доходность', thPosApy: 'Годовая доходность',
+    thPosProtocol: 'DeFi‑протокол', thPosAssets: 'Активы', thPosDateOpen: 'Дата откр.', thPosInitial: 'Сумма внесена, $', thPosDays: 'Дней в позиц.', thPosUsd: 'Текущая стоимость, $', thPosUpdated: 'Дата обновл.', thPosWithdrawn: 'Выведено, $', thPosProfit: 'Прибыль, $', thPosRoi: 'Доходность', thPosApy: 'Годовая доходность',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций',
@@ -272,7 +274,7 @@ const t = {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
-    thPosProtocol: 'DeFi protocol', thPosDateOpen: 'Date open', thPosInitial: 'Deposit, $', thPosDays: 'Days in pos.', thPosUsd: 'Current value, $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn, $', thPosProfit: 'Profit, $', thPosRoi: 'ROI', thPosApy: 'APY',
+    thPosProtocol: 'DeFi protocol', thPosAssets: 'Assets', thPosDateOpen: 'Date open', thPosInitial: 'Deposit, $', thPosDays: 'Days in pos.', thPosUsd: 'Current value, $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn, $', thPosProfit: 'Profit, $', thPosRoi: 'ROI', thPosApy: 'APY',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions',
@@ -315,7 +317,7 @@ function setLang(v) {
   const sectionTokens = document.getElementById('sectionTokens');
   if (sectionDefi) sectionDefi.textContent = t[lang].sectionDefi;
   if (sectionTokens) sectionTokens.textContent = t[lang].sectionTokens;
-  ['thPosProtocol','thPosDateOpen','thPosInitial','thPosDays','thPosUsd','thPosUpdated','thPosWithdrawn','thPosProfit','thPosRoi','thPosApy','thPosStatus'].forEach(id => {
+  ['thPosProtocol','thPosAssets','thPosDateOpen','thPosInitial','thPosDays','thPosUsd','thPosUpdated','thPosWithdrawn','thPosProfit','thPosRoi','thPosApy','thPosStatus'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = t[lang][id];
   });
@@ -358,6 +360,23 @@ function fmtApy(v) {
   if (v == null || isNaN(v)) return '—';
   return Math.round(v) + '%';
 }
+function fmtAssets(pos) {
+  const tokens = pos.tokens;
+  if (!tokens || tokens.length === 0) return '—';
+  const supplyTotal = tokens.filter((t) => (t.amount_usd ?? 0) > 0).reduce((s, t) => s + (t.amount_usd || 0), 0);
+  const netTotal = pos.total_usd;
+  const base = supplyTotal > 0.01 ? supplyTotal : (netTotal != null && Math.abs(netTotal) > 0.01 ? Math.abs(netTotal) : null);
+  const parts = tokens.slice(0, 6).map((t) => {
+    const usd = t.amount_usd ?? 0;
+    const absUsd = Math.abs(usd);
+    const pct = base && absUsd >= 0.01 ? ((usd / base) * 100).toFixed(1) : null;
+    const usdStr = fmtUsd(absUsd);
+    return pct != null ? `${t.symbol} ${usdStr} (${pct}%)` : `${t.symbol} ${usdStr}`;
+  });
+  const title = parts.join(' · ');
+  const short = tokens.length > 3 ? parts.slice(0, 2).join(', ') + '…' : parts.join(', ');
+  return `<span class="assets-cell" title="${title.replace(/"/g, '&quot;')}">${short}</span>`;
+}
 function fmtUsd(n) {
   if (n == null || isNaN(n) || n < 0.01) return '$0';
   return '$' + Number(n).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
@@ -395,19 +414,19 @@ function bindPositionEdits(fmtUsd) {
 
   function updateRowFromMerged(tr, merged) {
     tr.dataset.pos = JSON.stringify(merged);
-    tr.cells[1].textContent = merged.manualOpenedAt ? fmtDateDDMMYYYY(merged.manualOpenedAt) : '—';
-    tr.cells[2].textContent = merged.manualInitialUsd != null ? fmtUsd(merged.manualInitialUsd) : '—';
-    tr.cells[3].textContent = merged.daysOpen != null ? String(merged.daysOpen) : '—';
-    tr.cells[6].textContent = merged.withdrawnUsd != null && merged.withdrawnUsd !== 0 ? fmtUsd(merged.withdrawnUsd) : '—';
+    tr.cells[2].textContent = merged.manualOpenedAt ? fmtDateDDMMYYYY(merged.manualOpenedAt) : '—';
+    tr.cells[3].textContent = merged.manualInitialUsd != null ? fmtUsd(merged.manualInitialUsd) : '—';
+    tr.cells[4].textContent = merged.daysOpen != null ? String(merged.daysOpen) : '—';
+    tr.cells[7].textContent = merged.withdrawnUsd != null && merged.withdrawnUsd !== 0 ? fmtUsd(merged.withdrawnUsd) : '—';
     const profitUsd = merged.profitUsd;
     const profitClass = profitUsd != null && merged.manualInitialUsd != null
       ? (profitUsd > 0 ? 'profit-positive' : (profitUsd < 0 ? 'profit-negative' : 'profit-zero'))
       : 'profit-zero';
-    tr.cells[7].textContent = profitUsd != null && merged.manualInitialUsd != null ? fmtUsd(profitUsd) : '—';
-    tr.cells[7].className = profitClass;
-    tr.cells[8].textContent = merged.roiPercent != null && merged.manualInitialUsd != null ? fmtRoi(merged.roiPercent) : '—';
-    tr.cells[9].textContent = merged.apyPercent != null && merged.manualOpenedAt && merged.manualInitialUsd != null ? fmtApy(merged.apyPercent) : '—';
-    tr.cells[10].innerHTML = statusBadge(merged.status);
+    tr.cells[8].textContent = profitUsd != null && merged.manualInitialUsd != null ? fmtUsd(profitUsd) : '—';
+    tr.cells[8].className = profitClass;
+    tr.cells[9].textContent = merged.roiPercent != null && merged.manualInitialUsd != null ? fmtRoi(merged.roiPercent) : '—';
+    tr.cells[10].textContent = merged.apyPercent != null && merged.manualOpenedAt && merged.manualInitialUsd != null ? fmtApy(merged.apyPercent) : '—';
+    tr.cells[11].innerHTML = statusBadge(merged.status);
   }
 
   wrap.addEventListener('click', (e) => {
@@ -644,6 +663,7 @@ async function loadAssets() {
         const statusClass = (statusVal === 'close' || statusVal === 'closed') ? 'close' : 'open';
         const statusText = statusClass === 'close' ? 'close' : 'open';
         const editBtnText = lang === 'ru' ? '✏️ Изменить' : '✏️ Edit';
+        const assetsHtml = fmtAssets(pos);
         tr.innerHTML = `
           <td>
             <div class="protocol-cell">
@@ -651,6 +671,7 @@ async function loadAssets() {
               <span class="symbol">${pos.protocol_name}</span>
             </div>
           </td>
+          <td class="assets-cell-wrap" style="font-size:11px;color:var(--muted2);max-width:180px;">${assetsHtml}</td>
           <td>${dateOpenDisplay}</td>
           <td>${initialDisplay}</td>
           <td>${daysOpenDisplay}</td>
@@ -670,7 +691,7 @@ async function loadAssets() {
       bindPositionEdits(fmtUsd);
     } else {
       positionsTableWrap.style.display = 'block';
-      positionsTableBody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
+      positionsTableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
 
     summaryEl.style.display = 'grid';
