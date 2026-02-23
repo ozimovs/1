@@ -491,7 +491,7 @@ async function loadAssets() {
     const [balanceRes, tokenRes, positionsRes] = await Promise.all([
       fetch(`${base}/api/debank-balance?id=${encodeURIComponent(addrLower)}`),
       fetch(`${base}/api/debank-assets?id=${encodeURIComponent(addrLower)}`),
-      fetch(`${base}/api/defi-positions?id=${encodeURIComponent(addrLower)}`)
+      fetch(`${base}/api/defi-positions?id=${encodeURIComponent(addrLower)}&_=${Date.now()}`)
     ]);
 
     if (balanceRes.status === 404 || tokenRes.status === 404) {

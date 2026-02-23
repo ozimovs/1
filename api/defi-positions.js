@@ -200,7 +200,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
+    res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate');
     return res.status(200).json(positions);
   } catch (err) {
     return res.status(500).json({ error: err.message });
