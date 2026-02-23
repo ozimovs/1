@@ -1,13 +1,1 @@
-{
-  "functions": {
-    "api/debank.js": { "memory": 128 },
-    "api/debank/wallet.js": { "memory": 128 },
-    "api/debank/test.js": { "memory": 128 },
-    "api/debank-test.js": { "memory": 128 },
-    "api/debank-balance.js": { "memory": 128 },
-    "api/debank-tokens.js": { "memory": 128 },
-    "api/debank-assets.js": { "memory": 128 },
-    "api/defi-positions.js": { "memory": 128 },
-    "api/defi-position-manual.js": { "memory": 128 }
-  }
-}
+{"functions":{"api/debank.js":{"memory":128},"api/debank/wallet.js":{"memory":128},"api/debank/test.js":{"memory":128},"api/debank-test.js":{"memory":128},"api/debank-balance.js":{"memory":128},"api/debank-tokens.js":{"memory":128},"api/debank-assets.js":{"memory":128},"api/defi-positions.js":{"memory":128},"api/defi-position-manual.js":{"memory":128},"api/defi-debug.js":{"memory":128}}}
