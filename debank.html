@@ -10,13 +10,16 @@
     --bg: #0a0d12; --surface: #111520; --surface2: #181e2e; --border: #1e2a40;
     --accent: #00e5a0; --accent-dark: #008c5a; --warn: #f59e0b; --danger: #ef4444;
     --text: #e2e8f0; --muted: #4a5568; --muted2: #718096; --btn-primary-text: #0a0d12;
+    --profit-pos: #34d399; --profit-neg: #f87171; --status-open: #34d399; --status-close: #94a3b8;
   }
   [data-theme="light"] {
     --bg: #f1f5f9; --surface: #ffffff; --surface2: #e2e8f0; --border: #cbd5e1;
     --accent: #059669; --accent-dark: #047857; --warn: #d97706; --danger: #dc2626;
     --text: #1e293b; --muted: #64748b; --muted2: #94a3b8; --btn-primary-text: #ffffff;
+    --profit-pos: #059669; --profit-neg: #dc2626; --status-open: #059669; --status-close: #64748b;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow-x: hidden; max-width: 100vw; }
   body {
     background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif;
     min-height: 100vh; padding: 24px; transition: background 0.3s, color 0.3s;
@@ -27,7 +30,7 @@
     pointer-events: none; z-index: 0; opacity: 0.4;
   }
   [data-theme="light"] body::before { opacity: 0.15; }
-  .wrapper { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; }
+  .wrapper { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; overflow-x: hidden; }
   header {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border);
@@ -68,6 +71,43 @@
   .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), transparent); }
   .card .c-label { font-family: 'Space Mono', monospace; font-size: 10px; text-transform: uppercase; color: var(--muted2); margin-bottom: 8px; }
   .card .c-value { font-size: 24px; font-weight: 800; font-family: 'Space Mono', monospace; color: var(--accent); }
+  .defi-table-wrap { overflow: visible; max-width: 100%; }
+  .defi-table-wrap table { width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.35; table-layout: fixed; }
+  .defi-table-wrap thead tr { background: transparent; border-bottom: 1px solid var(--border); }
+  .defi-table-wrap thead th {
+    padding: 10px 8px; font-family: 'Space Mono', monospace;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted2); font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .defi-table-wrap thead th.text-left, .defi-table-wrap td.text-left { text-align: left; }
+  .defi-table-wrap thead th.text-right, .defi-table-wrap td.text-right { text-align: right; }
+  .defi-table-wrap td { padding: 10px 8px; font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .defi-table-wrap tbody tr { border-bottom: 1px solid var(--border); }
+  .defi-table-wrap tbody tr:hover { background: rgba(0, 229, 160, 0.03); }
+  .defi-table-wrap .col-protocol { width: 14%; min-width: 0; }
+  .defi-table-wrap .col-date { width: 6%; min-width: 0; }
+  .defi-table-wrap .col-num { width: 7%; min-width: 0; }
+  .defi-table-wrap .col-edit { width: 32px; min-width: 32px; }
+
+  @media (max-width: 767px) {
+    .defi-table-wrap thead { display: none; }
+    .defi-table-wrap table, .defi-table-wrap tbody, .defi-table-wrap tr, .defi-table-wrap td { display: block; }
+    .defi-table-wrap tr { border: 1px solid var(--border); margin-bottom: 12px; border-radius: 8px; padding: 12px; background: var(--surface2); }
+    .defi-table-wrap td { border: none; padding: 6px 0; white-space: normal; overflow: visible; text-overflow: clip; }
+    .defi-table-wrap td::before { content: attr(data-label); font-size: 10px; color: var(--muted2); text-transform: uppercase; display: block; margin-bottom: 2px; }
+    .defi-table-wrap td.text-right { text-align: left; }
+    .defi-table-wrap td.col-edit { padding-top: 10px; border-top: 1px solid var(--border); margin-top: 6px; }
+    .defi-table-wrap td.col-edit::before { display: none; }
+    .asset-donut-wrap { width: 120px; height: 120px; }
+    .asset-legend { font-size: 10px; gap: 4px 10px; }
+  }
+
+  @media (max-width: 413px) {
+    body { padding: 16px; }
+    .defi-block { padding: 16px; }
+    .asset-donut-wrap { width: 100px; height: 100px; }
+    .asset-legend { font-size: 9px; }
+  }
   .table-wrap {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; overflow-y: visible;
   }
@@ -102,8 +142,10 @@
   .editable-cell { cursor: pointer; min-width: 90px; }
   .editable-cell:hover { background: rgba(0,229,160,0.06); border-radius: 4px; }
   .editable-cell input { width: 100%; max-width: 110px; padding: 4px 8px; font: inherit; background: var(--surface2); border: 1px solid var(--accent); border-radius: 4px; color: var(--text); }
-  .edit-row-btn { padding: 4px 10px; font-size: 11px; cursor: pointer; background: var(--accent); color: var(--btn-primary-text); border: none; border-radius: 6px; font-weight: 600; }
-  .edit-row-btn:hover { filter: brightness(1.1); }
+  .edit-row-btn { padding: 4px 8px; font-size: 10px; cursor: pointer; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-weight: 600; }
+  .edit-row-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,160,0.06); }
+  .skeleton { background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: skeleton 1.2s ease-in-out infinite; border-radius: 6px; }
+  @keyframes skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   .modal-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000;
     align-items: center; justify-content: center; padding: 24px;
@@ -118,31 +160,34 @@
   .modal-box .form-group label { display: block; margin-bottom: 6px; font-size: 11px; color: var(--muted2); text-transform: uppercase; }
   .modal-box input, .modal-box select { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; box-sizing: border-box; }
   .modal-box input:focus, .modal-box select:focus { outline: none; border-color: var(--accent); }
-  .status-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-  .status-badge.open { background: rgba(0,229,160,0.2); color: var(--accent); }
-  .status-badge.close { background: rgba(113,128,150,0.3); color: var(--muted2); }
-  .asset-distribution-wrap { }
-  .asset-distribution-title { font-size: 14px; color: var(--muted2); margin-bottom: 12px; font-weight: 600; }
+  .status-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .status-badge.open { background: rgba(52,211,153,0.2); color: var(--status-open); }
+  .status-badge.close { background: rgba(148,163,184,0.25); color: var(--status-close); }
+  .defi-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; overflow-x: hidden; max-width: 100%; }
+  .defi-block .section-title { margin-bottom: 16px; font-size: 17px; }
+  .asset-distribution-wrap { margin-bottom: 20px; }
+  .asset-distribution-title { font-size: 12px; color: var(--muted2); margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
   .asset-distribution-card {
-    display: flex; flex-wrap: wrap; gap: 24px; align-items: center;
-    padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: flex-start; max-width: 100%;
   }
-  .asset-donut-wrap { position: relative; width: 180px; height: 180px; flex-shrink: 0; }
-  .asset-donut { width: 100%; height: 100%; border-radius: 50%; }
+  .asset-donut-wrap { position: relative; width: 140px; height: 140px; flex-shrink: 0; max-width: 100%; }
+  .asset-donut { width: 100%; height: 100%; border-radius: 50%; transition: filter 0.15s; }
+  .asset-donut-wrap:hover .asset-donut { filter: brightness(1.05); }
   .asset-donut-hole {
-    position: absolute; top: 50%; left: 50%; width: 55%; height: 55%;
+    position: absolute; top: 50%; left: 50%; width: 52%; height: 52%;
     transform: translate(-50%, -50%); background: var(--surface); border-radius: 50%;
   }
-  .asset-legend { display: flex; flex-wrap: wrap; gap: 12px 20px; font-size: 12px; }
-  .asset-legend-item { display: flex; align-items: center; gap: 8px; cursor: help; }
-  .asset-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .asset-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11px; color: var(--text); max-width: 100%; min-width: 0; }
+  .asset-legend-item { display: flex; align-items: center; gap: 6px; cursor: help; padding: 2px 0; transition: opacity 0.15s; }
+  .asset-legend-item:hover { opacity: 0.85; }
+  .asset-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
   .modal-actions .btn { flex: 1; }
   .modal-status { margin-top: 12px; font-size: 13px; min-height: 20px; }
   .modal-status.success { color: var(--accent); }
   .modal-status.error { color: var(--danger); }
-  .profit-positive { color: var(--accent); }
-  .profit-negative { color: var(--danger); }
+  .profit-positive { color: var(--profit-pos); }
+  .profit-negative { color: var(--profit-neg); }
   .profit-zero { color: var(--muted2); }
 </style>
 </head>
@@ -173,37 +218,43 @@
     <p style="font-size:11px; color:var(--muted2); margin-top:12px; margin-bottom:0;" id="apiHint">При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app</p>
   </div>
 
-  <h2 class="section-title" id="sectionDefi" style="display:none;margin-bottom:16px;font-size:18px;">DeFi позиции</h2>
-  <div class="asset-distribution-wrap" id="assetDistributionWrap" style="display:none;margin-bottom:24px;">
-    <h3 class="asset-distribution-title" id="assetDistributionTitle">Распределение активов в DeFi‑позициях</h3>
-    <div class="asset-distribution-card">
-      <div class="asset-donut-wrap">
-        <div class="asset-donut" id="assetDonut"></div>
-        <div class="asset-donut-hole"></div>
+  <div class="defi-block" id="defiBlock" style="display:none;">
+    <h2 class="section-title" id="sectionDefi">DeFi позиции</h2>
+    <div class="asset-distribution-wrap" id="assetDistributionWrap" style="display:none;">
+      <h3 class="asset-distribution-title" id="assetDistributionTitle">Распределение активов в DeFi‑позициях</h3>
+      <div class="asset-distribution-card">
+        <div class="asset-donut-wrap">
+          <div class="asset-donut" id="assetDonut"></div>
+          <div class="asset-donut-hole"></div>
+        </div>
+        <div class="asset-legend" id="assetLegend"></div>
       </div>
-      <div class="asset-legend" id="assetLegend"></div>
     </div>
-  </div>
-  <div class="table-wrap" id="positionsTableWrap" style="display:none;margin-bottom:32px;">
-    <table>
-      <thead>
-        <tr>
-          <th id="thPosProtocol">DeFi‑протокол</th>
-          <th id="thPosDateOpen">Дата откр.</th>
-          <th id="thPosInitial">Сумма внесена, $</th>
-          <th id="thPosDays">Дней в позиц.</th>
-          <th id="thPosUsd">Текущая стоимость, $</th>
-          <th id="thPosUpdated">Дата обновл.</th>
-          <th id="thPosWithdrawn">Выведено, $</th>
-          <th id="thPosProfit">Прибыль, $</th>
-          <th id="thPosRoi">Доходность</th>
-          <th id="thPosApy">Годовая доходность</th>
-          <th id="thPosStatus">Состояние</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="positionsTableBody"></tbody>
-    </table>
+    <div class="defi-skeleton" id="defiSkeleton" style="display:none;">
+      <div class="skeleton" style="height:140px;margin-bottom:16px;"></div>
+      <div class="skeleton" style="height:200px;"></div>
+    </div>
+    <div class="defi-table-wrap" id="positionsTableWrap" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th class="text-left col-protocol" id="thPosProtocol">Протокол</th>
+            <th class="text-left col-date" id="thPosDateOpen">Откр.</th>
+            <th class="text-right col-num" id="thPosInitial">Внесено $</th>
+            <th class="text-right col-num" id="thPosDays">Дней</th>
+            <th class="text-right col-num" id="thPosUsd">Стоимость $</th>
+            <th class="text-left col-date" id="thPosUpdated">Обновл.</th>
+            <th class="text-right col-num" id="thPosWithdrawn">Выведено</th>
+            <th class="text-right col-num" id="thPosProfit">Прибыль</th>
+            <th class="text-right col-num" id="thPosRoi">ROI</th>
+            <th class="text-right col-num" id="thPosApy">APY</th>
+            <th class="text-left" id="thPosStatus">Статус</th>
+            <th class="col-edit"></th>
+          </tr>
+        </thead>
+        <tbody id="positionsTableBody"></tbody>
+      </table>
+    </div>
   </div>
   <h2 class="section-title" id="sectionTokens" style="display:none;margin-bottom:16px;font-size:18px;">Токены на кошельке</h2>
   <div class="summary-cards" id="summaryCards" style="display:none;">
@@ -245,15 +296,15 @@
     <div class="modal-box">
       <h3 id="modalTitle">Редактировать позицию</h3>
       <div class="form-group">
-        <label id="modalLblDate">Дата открытия</label>
+        <label id="modalLblDate">Дата открытия (ДД.ММ.ГГГГ)</label>
         <input type="date" id="modalDate" />
       </div>
       <div class="form-group">
-        <label id="modalLblInitial">Начальная сумма, $</label>
+        <label id="modalLblInitial">Начальная сумма, USD</label>
         <input type="number" id="modalInitial" step="0.01" min="0" placeholder="0" />
       </div>
       <div class="form-group">
-        <label id="modalLblWithdrawn">Выведено, $</label>
+        <label id="modalLblWithdrawn">Выведено, USD</label>
         <input type="number" id="modalWithdrawn" step="0.01" min="0" placeholder="0" />
       </div>
       <div class="form-group">
@@ -281,35 +332,34 @@ const t = {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
-    thPosProtocol: 'DeFi‑протокол', thPosDateOpen: 'Дата откр.', thPosInitial: 'Сумма внесена, $', thPosDays: 'Дней в позиц.', thPosUsd: 'Текущая стоимость, $', thPosUpdated: 'Дата обновл.', thPosWithdrawn: 'Выведено, $', thPosProfit: 'Прибыль, $', thPosRoi: 'Доходность', thPosApy: 'Годовая доходность',
-    assetDistributionTitle: 'Распределение активов в DeFi‑позициях',
+    thPosProtocol: 'Протокол', thPosDateOpen: 'Откр.', thPosInitial: 'Внесено $', thPosDays: 'Дней', thPosUsd: 'Стоимость $', thPosUpdated: 'Обновл.', thPosWithdrawn: 'Выведено $', thPosProfit: 'Прибыль $', thPosRoi: 'ROI', thPosApy: 'APY', thPosStatus: 'Состояние',
+    assetDistributionTitle: 'Распределение активов',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
     noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций',
     apiUnavailable: 'API недоступен. Разверните проект на Vercel и откройте сайт по Vercel-адресу.',
     apiHint: 'При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app',
-    thPosStatus: 'Состояние',
-    modalTitle: 'Редактировать позицию', modalLblDate: 'Дата открытия', modalLblInitial: 'Начальная сумма, $',
-    modalLblWithdrawn: 'Выведено, $', modalLblStatus: 'Состояние',
+    modalTitle: 'Редактировать позицию', modalLblDate: 'Дата открытия (ДД.ММ.ГГГГ)', modalLblInitial: 'Начальная сумма, USD',
+    modalLblWithdrawn: 'Выведено, USD', modalLblStatus: 'Состояние',
     modalCancel: 'Отмена', modalSave: 'Сохранить', modalSaving: 'Сохранение...', modalSaved: 'Сохранено',
-    modalError: 'Ошибка сохранения', editBtn: '✏️ Изменить'
+    modalError: 'Ошибка сохранения', editBtn: '✏️'
   },
   en: {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
-    thPosProtocol: 'DeFi protocol', thPosDateOpen: 'Date open', thPosInitial: 'Deposit, $', thPosDays: 'Days in pos.', thPosUsd: 'Current value, $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn, $', thPosProfit: 'Profit, $', thPosRoi: 'ROI', thPosApy: 'APY',
-    assetDistributionTitle: 'Asset distribution in DeFi positions',
+    thPosProtocol: 'Protocol', thPosDateOpen: 'Open', thPosInitial: 'Deposit $', thPosDays: 'Days', thPosUsd: 'Value $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn $', thPosProfit: 'Profit $', thPosRoi: 'ROI', thPosApy: 'APY',
+    assetDistributionTitle: 'Asset distribution',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions',
     apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.',
     apiHint: 'If load fails: open debank.html?api=https://your-vercel.vercel.app',
     thPosStatus: 'Status',
-    modalTitle: 'Edit position', modalLblDate: 'Date opened', modalLblInitial: 'Initial amount, $',
-    modalLblWithdrawn: 'Withdrawn, $', modalLblStatus: 'Status',
+    modalTitle: 'Edit position', modalLblDate: 'Date opened (DD.MM.YYYY)', modalLblInitial: 'Initial amount, USD',
+    modalLblWithdrawn: 'Withdrawn, USD', modalLblStatus: 'Status',
     modalCancel: 'Cancel', modalSave: 'Save', modalSaving: 'Saving...', modalSaved: 'Saved',
-    modalError: 'Save failed', editBtn: '✏️ Edit'
+    modalError: 'Save failed', editBtn: '✏️'
   }
 };
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
@@ -385,7 +435,7 @@ function fmtApy(v) {
   if (v == null || isNaN(v)) return '—';
   return Math.round(v) + '%';
 }
-const ASSET_CHART_COLORS = ['#00e5a0','#3b82f6','#f59e0b','#a855f7','#ec4899','#06b6d4','#84cc16','#f97316'];
+const ASSET_CHART_COLORS = ['#34d399','#60a5fa','#a78bfa','#38bdf8','#fbbf24','#94a3b8','#f472b6'];
 
 function computeAssetDistribution(positions) {
   const bySymbol = {};
@@ -401,10 +451,22 @@ function computeAssetDistribution(positions) {
       bySymbol[sym] = (bySymbol[sym] ?? 0) + usd;
     }
   }
-  const assets = Object.entries(bySymbol)
+  let assets = Object.entries(bySymbol)
     .filter(([, usd]) => Math.abs(usd) >= 0.01)
     .map(([symbol, usd]) => ({ symbol, usd, pct: totalDeFiUsd > 0.01 ? (usd / totalDeFiUsd) * 100 : 0 }))
     .sort((a, b) => Math.abs(b.usd) - Math.abs(a.usd));
+  const topN = 10;
+  if (assets.length > topN) {
+    const top = assets.slice(0, topN);
+    const rest = assets.slice(topN);
+    const othersUsd = rest.reduce((s, a) => s + a.usd, 0);
+    const othersPct = totalDeFiUsd > 0.01 ? (othersUsd / totalDeFiUsd) * 100 : 0;
+    if (Math.abs(othersPct) >= 0.05) {
+      assets = [...top, { symbol: 'Others', usd: othersUsd, pct: othersPct }];
+    } else {
+      assets = top;
+    }
+  }
   return { totalDeFiUsd, assets };
 }
 
@@ -432,13 +494,14 @@ function renderAssetChart(positions) {
   donut.style.background = parts.length ? `conic-gradient(${parts.join(', ')})` : 'var(--surface2)';
   const posIdx = {};
   positiveAssets.forEach((a, i) => { posIdx[a.symbol] = i; });
-  legend.innerHTML = assets.map((a, i) => {
+  const legendItems = assets.filter((a) => Math.abs(a.pct) >= 0.1).map((a, i) => {
     const idx = posIdx[a.symbol] ?? i;
     const color = ASSET_CHART_COLORS[idx % ASSET_CHART_COLORS.length];
     const pctStr = a.pct.toFixed(1).replace('.', lang === 'ru' ? ',' : '.');
     const usdStr = fmtUsd(Math.abs(a.usd));
     return `<div class="asset-legend-item" title="${a.symbol}: ${usdStr} (${pctStr}%)"><span class="asset-legend-dot" style="background:${color}"></span><span>${a.symbol} ${pctStr}%</span></div>`;
-  }).join('');
+  });
+  legend.innerHTML = legendItems.join('');
 }
 function fmtUsd(n) {
   if (n == null || isNaN(n) || n < 0.01) return '$0';
@@ -482,13 +545,15 @@ function bindPositionEdits(fmtUsd) {
     tr.cells[3].textContent = merged.daysOpen != null ? String(merged.daysOpen) : '—';
     tr.cells[6].textContent = merged.withdrawnUsd != null && merged.withdrawnUsd !== 0 ? fmtUsd(merged.withdrawnUsd) : '—';
     const profitUsd = merged.profitUsd;
-    const profitClass = profitUsd != null && merged.manualInitialUsd != null
-      ? (profitUsd > 0 ? 'profit-positive' : (profitUsd < 0 ? 'profit-negative' : 'profit-zero'))
-      : 'profit-zero';
+    const profitClass = profitUsd != null && merged.manualInitialUsd != null ? (profitUsd > 0 ? 'profit-positive' : (profitUsd < 0 ? 'profit-negative' : 'profit-zero')) : 'profit-zero';
     tr.cells[7].textContent = profitUsd != null && merged.manualInitialUsd != null ? fmtUsd(profitUsd) : '—';
-    tr.cells[7].className = profitClass;
+    tr.cells[7].className = 'text-right ' + profitClass;
+    const roiClass = merged.roiPercent != null && merged.manualInitialUsd != null ? (merged.roiPercent > 0 ? 'profit-positive' : (merged.roiPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
+    const apyClass = merged.apyPercent != null ? (merged.apyPercent > 0 ? 'profit-positive' : (merged.apyPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
     tr.cells[8].textContent = merged.roiPercent != null && merged.manualInitialUsd != null ? fmtRoi(merged.roiPercent) : '—';
+    tr.cells[8].className = 'text-right ' + roiClass;
     tr.cells[9].textContent = merged.apyPercent != null && merged.manualOpenedAt && merged.manualInitialUsd != null ? fmtApy(merged.apyPercent) : '—';
+    tr.cells[9].className = 'text-right ' + apyClass;
     tr.cells[10].innerHTML = statusBadge(merged.status);
   }
 
@@ -612,10 +677,8 @@ async function loadAssets() {
   emptyEl.style.display = 'none';
   summaryEl.style.display = 'none';
   tableEl.style.display = 'none';
-  document.getElementById('sectionDefi').style.display = 'none';
+  document.getElementById('defiBlock').style.display = 'none';
   document.getElementById('sectionTokens').style.display = 'none';
-  document.getElementById('assetDistributionWrap').style.display = 'none';
-  document.getElementById('positionsTableWrap').style.display = 'none';
 
   if (!addr || !/^0x[a-fA-F0-9]{40}$/.test(addr)) {
     errorEl.textContent = t[lang].invalidAddr;
@@ -625,6 +688,10 @@ async function loadAssets() {
 
   loadingEl.style.display = 'block';
   loadingEl.textContent = t[lang].loading;
+  document.getElementById('defiBlock').style.display = 'block';
+  document.getElementById('defiSkeleton').style.display = (addr && /^0x[a-fA-F0-9]{40}$/.test(addr)) ? 'block' : 'none';
+  document.getElementById('assetDistributionWrap').style.display = 'none';
+  document.getElementById('positionsTableWrap').style.display = 'none';
 
   let base = new URLSearchParams(location.search).get('api');
   if (!base) {
@@ -649,6 +716,8 @@ async function loadAssets() {
 
     if (balanceRes.status === 404 || tokenRes.status === 404) {
       loadingEl.style.display = 'none';
+      document.getElementById('defiBlock').style.display = 'none';
+      document.getElementById('defiSkeleton').style.display = 'none';
       errorEl.textContent = t[lang].apiUnavailable;
       errorEl.style.display = 'block';
       return;
@@ -675,6 +744,8 @@ async function loadAssets() {
     loadingEl.style.display = 'none';
 
     if (!balanceRes.ok) {
+      document.getElementById('defiBlock').style.display = 'none';
+      document.getElementById('defiSkeleton').style.display = 'none';
       const err = balance.error || balance.message || 'API error';
       const detail = balance.detail || '';
       errorEl.textContent = err + (detail ? ': ' + detail : '');
@@ -682,6 +753,8 @@ async function loadAssets() {
       return;
     }
     if (!tokenRes.ok) {
+      document.getElementById('defiBlock').style.display = 'none';
+      document.getElementById('defiSkeleton').style.display = 'none';
       const err = tokens?.error || tokens?.message || 'API error';
       const detail = tokens?.detail || '';
       errorEl.textContent = err + (detail ? ': ' + detail : '');
@@ -697,8 +770,9 @@ async function loadAssets() {
     const tokenCount = tokenList.length;
     const positionsList = positionsRes.ok && Array.isArray(positions) ? positions : [];
 
-    document.getElementById('sectionDefi').style.display = 'block';
+    document.getElementById('defiBlock').style.display = 'block';
     document.getElementById('sectionTokens').style.display = 'block';
+    document.getElementById('defiSkeleton').style.display = 'none';
 
     renderAssetChart(positionsList);
 
@@ -725,28 +799,26 @@ async function loadAssets() {
         }
         const roiDisplay = pos.roiPercent != null && pos.manualInitialUsd != null ? fmtRoi(pos.roiPercent) : '—';
         const apyDisplay = pos.apyPercent != null && pos.manualOpenedAt && pos.manualInitialUsd != null ? fmtApy(pos.apyPercent) : '—';
+        const roiClass = pos.roiPercent != null && pos.manualInitialUsd != null ? (pos.roiPercent > 0 ? 'profit-positive' : (pos.roiPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
+        const apyClass = pos.apyPercent != null ? (pos.apyPercent > 0 ? 'profit-positive' : (pos.apyPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
         const statusVal = (pos.status || 'open').toLowerCase();
         const statusClass = (statusVal === 'close' || statusVal === 'closed') ? 'close' : 'open';
         const statusText = statusClass === 'close' ? 'close' : 'open';
-        const editBtnText = lang === 'ru' ? '✏️ Изменить' : '✏️ Edit';
+        const editBtnText = t[lang].editBtn;
+        const lbl = (ru, en) => lang === 'ru' ? ru : en;
         tr.innerHTML = `
-          <td>
-            <div class="protocol-cell">
-              ${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}
-              <span class="symbol">${pos.protocol_name}</span>
-            </div>
-          </td>
-          <td>${dateOpenDisplay}</td>
-          <td>${initialDisplay}</td>
-          <td>${daysOpenDisplay}</td>
-          <td class="usd-value">${pos.total_usd != null ? fmtUsd(pos.total_usd) : '—'}</td>
-          <td>${updatedDisplay}</td>
-          <td>${withdrawnDisplay}</td>
-          <td class="${profitClass}">${profitDisplay}</td>
-          <td>${roiDisplay}</td>
-          <td>${apyDisplay}</td>
-          <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-          <td><button class="edit-row-btn" type="button">${editBtnText}</button></td>
+          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span></div></td>
+          <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">${dateOpenDisplay}</td>
+          <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">${initialDisplay}</td>
+          <td class="text-right col-num" data-label="${lbl('Дней','Days')}">${daysOpenDisplay}</td>
+          <td class="text-right col-num usd-value" data-label="${lbl('Стоимость $','Value $')}">${pos.total_usd != null ? fmtUsd(pos.total_usd) : '—'}</td>
+          <td class="text-left col-date" data-label="${lbl('Обновл.','Updated')}">${updatedDisplay}</td>
+          <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">${withdrawnDisplay}</td>
+          <td class="text-right col-num ${profitClass}" data-label="${lbl('Прибыль','Profit')}">${profitDisplay}</td>
+          <td class="text-right col-num ${roiClass}" data-label="ROI">${roiDisplay}</td>
+          <td class="text-right col-num ${apyClass}" data-label="APY">${apyDisplay}</td>
+          <td class="text-left" data-label="${lbl('Состояние','Status')}"><span class="status-badge ${statusClass}">${statusText}</span></td>
+          <td class="col-edit"><button class="edit-row-btn" type="button" title="${lbl('Редактировать','Edit')}">${editBtnText}</button></td>
         `;
         positionsTableBody.appendChild(tr);
       });
@@ -801,6 +873,8 @@ async function loadAssets() {
     }
   } catch (err) {
     loadingEl.style.display = 'none';
+    document.getElementById('defiBlock').style.display = 'none';
+    document.getElementById('defiSkeleton').style.display = 'none';
     const errMsg = lang === 'ru'
       ? 'Нет связи с API. Узнайте свой Vercel URL в dashboard, затем откройте: debank.html?api=https://ваш-проект.vercel.app'
       : 'No connection to API. Get your Vercel URL from dashboard, then open: debank.html?api=https://your-project.vercel.app';
