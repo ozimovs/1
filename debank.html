@@ -370,7 +370,7 @@
 // URL API при заходе с GitHub Pages
 const VERCEL_API = 'https://1-nine-sable-41.vercel.app';
 const LANG_KEY = 'defi_lang'; const THEME_KEY = 'defi_theme';
-const MIN_POSITION_USD = 100;
+const MIN_POSITION_PCT = 1;
 const t = {
   ru: {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
@@ -509,12 +509,20 @@ const ASSET_CHART_COLORS = ['#34d399','#60a5fa','#a78bfa','#38bdf8','#fbbf24','#
 const ASSET_CHART_COLORS_MUTED = ['#64748b','#94a3b8','#a1a1aa'];
 
 function filterPositions(positions) {
+  const totalOpenUsd = positions.reduce((sum, pos) => {
+    const statusVal = (pos.status || 'open').toLowerCase();
+    const isClosed = statusVal === 'close' || statusVal === 'closed';
+    if (isClosed) return sum;
+    return sum + (pos.total_usd ?? 0);
+  }, 0);
   return positions.filter((pos) => {
     const statusVal = (pos.status || 'open').toLowerCase();
     const isClosed = statusVal === 'close' || statusVal === 'closed';
     if (isClosed) return true;
     const usd = pos.total_usd ?? 0;
-    return usd >= MIN_POSITION_USD;
+    if (totalOpenUsd < 0.01) return true;
+    const pct = (usd / totalOpenUsd) * 100;
+    return pct >= MIN_POSITION_PCT;
   });
 }
 
