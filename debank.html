@@ -216,6 +216,15 @@
   .profit-positive { color: var(--profit-pos); }
   .profit-negative { color: var(--profit-neg); }
   .profit-zero { color: var(--muted2); }
+  .wallet-tokens-row { border-top: 2px solid var(--border); }
+  .wallet-tokens-row td { color: var(--muted2); }
+  .wallet-tokens-row .usd-value { color: var(--muted2); }
+  .portfolio-yield-wrap {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 16px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: fit-content;
+  }
+  .portfolio-yield-label { font-family: 'Space Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--muted2); font-weight: 600; }
+  .portfolio-yield-value { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 800; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -259,6 +268,10 @@
         <div class="asset-legend" id="assetLegend"></div>
       </div>
     </div>
+    <div class="portfolio-yield-wrap" id="portfolioYieldWrap" style="display:none;">
+      <span class="portfolio-yield-label" id="portfolioYieldLabel">Текущая доходность портфеля</span>
+      <span class="portfolio-yield-value" id="portfolioYieldValue">—</span>
+    </div>
     <div class="defi-skeleton" id="defiSkeleton" style="display:none;">
       <div class="skeleton" style="height:140px;margin-bottom:16px;"></div>
       <div class="skeleton" style="height:200px;"></div>
@@ -277,6 +290,7 @@
             <th class="text-right col-num" id="thPosProfit">Прибыль</th>
             <th class="text-right col-num" id="thPosRoi">ROI</th>
             <th class="text-right col-num" id="thPosApy">APY</th>
+            <th class="text-right col-num" id="thPosCurYld">Тек.дох.</th>
             <th class="text-left col-status" id="thPosStatus">Сост.</th>
             <th class="col-edit"></th>
           </tr>
@@ -356,16 +370,17 @@
 // URL API при заходе с GitHub Pages
 const VERCEL_API = 'https://1-nine-sable-41.vercel.app';
 const LANG_KEY = 'defi_lang'; const THEME_KEY = 'defi_theme';
+const MIN_POSITION_USD = 100;
 const t = {
   ru: {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
-    thPosProtocol: 'Протокол', thPosDateOpen: 'Откр.', thPosInitial: 'Внесено $', thPosDays: 'Дней', thPosUsd: 'Стоимость $', thPosUpdated: 'Обновл.', thPosWithdrawn: 'Выведено $', thPosProfit: 'Прибыль $', thPosRoi: 'ROI', thPosApy: 'APY', thPosStatus: 'Сост.',
+    thPosProtocol: 'Протокол', thPosDateOpen: 'Откр.', thPosInitial: 'Внесено $', thPosDays: 'Дней', thPosUsd: 'Стоимость $', thPosUpdated: 'Обновл.', thPosWithdrawn: 'Выведено $', thPosProfit: 'Прибыль $', thPosRoi: 'ROI', thPosApy: 'APY', thPosCurYld: 'Тек.дох.', thPosStatus: 'Сост.', lblPortfolioYield: 'Текущая доходность портфеля',
     assetDistributionTitle: 'Распределение активов', lblOthers: 'Другие', lblTotalValue: 'Сумма', lblDeFiPortfolio: 'DeFi портфель',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
-    noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций',
+    noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций', walletTokensRow: 'Токены на кошельке',
     apiUnavailable: 'API недоступен. Разверните проект на Vercel и откройте сайт по Vercel-адресу.',
     apiHint: 'При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app',
     modalTitle: 'Редактировать позицию', modalLblDate: 'Дата открытия (ДД.ММ.ГГГГ)', modalLblInitial: 'Начальная сумма, USD',
@@ -377,11 +392,11 @@ const t = {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
-    thPosProtocol: 'Protocol', thPosDateOpen: 'Open', thPosInitial: 'Deposit $', thPosDays: 'Days', thPosUsd: 'Value $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn $', thPosProfit: 'Profit $', thPosRoi: 'ROI', thPosApy: 'APY',
+    thPosProtocol: 'Protocol', thPosDateOpen: 'Open', thPosInitial: 'Deposit $', thPosDays: 'Days', thPosUsd: 'Value $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn $', thPosProfit: 'Profit $', thPosRoi: 'ROI', thPosApy: 'APY', thPosCurYld: 'CurYld', lblPortfolioYield: 'Portfolio current yield',
     assetDistributionTitle: 'Asset distribution', lblOthers: 'Others', lblTotalValue: 'Total', lblDeFiPortfolio: 'DeFi portfolio',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
-    noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions',
+    noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions', walletTokensRow: 'Wallet tokens',
     apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.',
     apiHint: 'If load fails: open debank.html?api=https://your-vercel.vercel.app',
     thPosStatus: 'St.',
@@ -422,7 +437,7 @@ function setLang(v) {
   const sectionTokens = document.getElementById('sectionTokens');
   if (sectionDefi) sectionDefi.textContent = t[lang].sectionDefi;
   if (sectionTokens) sectionTokens.textContent = t[lang].sectionTokens;
-  ['thPosProtocol','thPosDateOpen','thPosInitial','thPosDays','thPosUsd','thPosUpdated','thPosWithdrawn','thPosProfit','thPosRoi','thPosApy','thPosStatus','assetDistributionTitle'].forEach(id => {
+  ['thPosProtocol','thPosDateOpen','thPosInitial','thPosDays','thPosUsd','thPosUpdated','thPosWithdrawn','thPosProfit','thPosRoi','thPosApy','thPosCurYld','thPosStatus','assetDistributionTitle'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = t[lang][id];
   });
@@ -466,13 +481,48 @@ function fmtApy(v) {
   if (v == null || isNaN(v)) return '—';
   return Math.round(v) + '%';
 }
+
+function calcCurrentYield(pos) {
+  const statusVal = (pos.status || 'open').toLowerCase();
+  const isClosed = statusVal === 'close' || statusVal === 'closed';
+  if (isClosed) return null;
+  const initial = pos.manualInitialUsd;
+  const current = pos.total_usd;
+  const openedAt = pos.manualOpenedAt;
+  if (initial == null || initial <= 0 || current == null || !openedAt) return null;
+  const openDate = new Date(openedAt);
+  if (isNaN(openDate.getTime())) return null;
+  const now = new Date();
+  const daysOpen = Math.max(1, Math.floor((now - openDate) / (1000 * 60 * 60 * 24)));
+  const profit = current - initial;
+  const annualYield = (profit / initial) * (365 / daysOpen) * 100;
+  return Math.max(0, annualYield);
+}
+
+function fmtCurYld(v) {
+  if (v == null || isNaN(v)) return '—';
+  const sep = lang === 'ru' ? ',' : '.';
+  return Number(v).toFixed(1).replace('.', sep) + '%';
+}
+
 const ASSET_CHART_COLORS = ['#34d399','#60a5fa','#a78bfa','#38bdf8','#fbbf24','#f472b6','#22d3ee'];
 const ASSET_CHART_COLORS_MUTED = ['#64748b','#94a3b8','#a1a1aa'];
 
+function filterPositions(positions) {
+  return positions.filter((pos) => {
+    const statusVal = (pos.status || 'open').toLowerCase();
+    const isClosed = statusVal === 'close' || statusVal === 'closed';
+    if (isClosed) return true;
+    const usd = pos.total_usd ?? 0;
+    return usd >= MIN_POSITION_USD;
+  });
+}
+
 function computeAssetDistribution(positions) {
+  const filtered = filterPositions(positions);
   const bySymbol = {};
   let totalDeFiUsd = 0;
-  for (const pos of positions) {
+  for (const pos of filtered) {
     if (pos.fromManualOnly && (pos.total_usd == null || pos.total_usd < 0.01)) continue;
     totalDeFiUsd += pos.total_usd ?? 0;
     const tokens = pos.tokens || [];
@@ -822,18 +872,23 @@ async function loadAssets() {
     const positionsList = positionsRes.ok && Array.isArray(positions) ? positions : [];
 
     document.getElementById('defiBlock').style.display = 'block';
-    document.getElementById('sectionTokens').style.display = 'block';
+    document.getElementById('sectionTokens').style.display = 'none';
+    document.getElementById('summaryCards').style.display = 'none';
+    document.getElementById('tableWrap').style.display = 'none';
     document.getElementById('defiSkeleton').style.display = 'none';
 
+    const filteredPositions = filterPositions(positionsList);
     lastAssetPositions = positionsList;
     renderAssetChart(positionsList);
+
+    const walletTokensUsd = tokenList.reduce((sum, tok) => sum + ((tok.price || 0) * (tok.amount || 0)), 0);
 
     const positionsTableWrap = document.getElementById('positionsTableWrap');
     const positionsTableBody = document.getElementById('positionsTableBody');
     positionsTableBody.innerHTML = '';
-    if (positionsList.length > 0) {
+    if (filteredPositions.length > 0 || walletTokensUsd >= 0.01) {
       positionsTableWrap.style.display = 'block';
-      positionsList.forEach((pos) => {
+      filteredPositions.forEach((pos) => {
         const tr = document.createElement('tr');
         tr.dataset.pos = JSON.stringify(pos);
         tr.dataset.wallet = addrLower;
@@ -853,6 +908,9 @@ async function loadAssets() {
         const apyDisplay = pos.apyPercent != null && pos.manualOpenedAt && pos.manualInitialUsd != null ? fmtApy(pos.apyPercent) : '—';
         const roiClass = pos.roiPercent != null && pos.manualInitialUsd != null ? (pos.roiPercent > 0 ? 'profit-positive' : (pos.roiPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
         const apyClass = pos.apyPercent != null ? (pos.apyPercent > 0 ? 'profit-positive' : (pos.apyPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
+        const curYld = calcCurrentYield(pos);
+        const curYldDisplay = fmtCurYld(curYld);
+        const curYldClass = curYld != null && curYld > 0 ? 'profit-positive' : '';
         const statusVal = (pos.status || 'open').toLowerCase();
         const statusClass = (statusVal === 'close' || statusVal === 'closed') ? 'close' : 'open';
         const statusText = statusClass === 'close' ? 'close' : 'open';
@@ -869,59 +927,63 @@ async function loadAssets() {
           <td class="text-right col-num ${profitClass}" data-label="${lbl('Прибыль','Profit')}">${profitDisplay}</td>
           <td class="text-right col-num ${roiClass}" data-label="ROI">${roiDisplay}</td>
           <td class="text-right col-num ${apyClass}" data-label="APY">${apyDisplay}</td>
+          <td class="text-right col-num ${curYldClass}" data-label="${lbl('Тек.дох.','CurYld')}">${curYldDisplay}</td>
           <td class="text-left col-status" data-label="${lbl('Состояние','Status')}"><span class="status-badge ${statusClass}">${statusText}</span></td>
           <td class="col-edit"><button class="edit-row-btn" type="button" title="${lbl('Редактировать','Edit')}">${editBtnText}</button></td>
         `;
         positionsTableBody.appendChild(tr);
       });
+
+      if (walletTokensUsd >= 0.01) {
+        const walletTr = document.createElement('tr');
+        walletTr.className = 'wallet-tokens-row';
+        const lbl = (ru, en) => lang === 'ru' ? ru : en;
+        walletTr.innerHTML = `
+          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell"><span class="symbol" style="color:var(--muted2)">${t[lang].walletTokensRow}</span></div></td>
+          <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">—</td>
+          <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">—</td>
+          <td class="text-right col-num" data-label="${lbl('Дней','Days')}">—</td>
+          <td class="text-right col-num usd-value" data-label="${lbl('Стоимость $','Value $')}">${fmtUsd(walletTokensUsd)}</td>
+          <td class="text-left col-date" data-label="${lbl('Обновл.','Updated')}">—</td>
+          <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">—</td>
+          <td class="text-right col-num" data-label="${lbl('Прибыль','Profit')}">—</td>
+          <td class="text-right col-num" data-label="ROI">—</td>
+          <td class="text-right col-num" data-label="APY">—</td>
+          <td class="text-right col-num" data-label="${lbl('Тек.дох.','CurYld')}">—</td>
+          <td class="text-left col-status" data-label="${lbl('Состояние','Status')}">—</td>
+          <td class="col-edit"></td>
+        `;
+        positionsTableBody.appendChild(walletTr);
+      }
+
+      let portfolioYieldSum = 0;
+      let portfolioYieldWeight = 0;
+      filteredPositions.forEach((pos) => {
+        const curYld = calcCurrentYield(pos);
+        if (curYld != null && pos.total_usd > 0) {
+          portfolioYieldSum += curYld * pos.total_usd;
+          portfolioYieldWeight += pos.total_usd;
+        }
+      });
+      const portfolioYieldWrap = document.getElementById('portfolioYieldWrap');
+      const portfolioYieldLabel = document.getElementById('portfolioYieldLabel');
+      const portfolioYieldValue = document.getElementById('portfolioYieldValue');
+      if (portfolioYieldWeight > 0) {
+        const portfolioYield = portfolioYieldSum / portfolioYieldWeight;
+        portfolioYieldWrap.style.display = 'flex';
+        portfolioYieldLabel.textContent = t[lang].lblPortfolioYield;
+        portfolioYieldValue.textContent = fmtCurYld(portfolioYield);
+      } else {
+        portfolioYieldWrap.style.display = 'none';
+      }
+
       document.getElementById('positionsTableWrap').dataset.base = base;
       document.getElementById('positionsTableWrap').dataset.wallet = addrLower;
       bindPositionEdits(fmtUsd);
     } else {
       positionsTableWrap.style.display = 'block';
-      positionsTableBody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
-    }
-
-    summaryEl.style.display = 'grid';
-    document.getElementById('totalValue').textContent = fmtUsd(totalUsd);
-    document.getElementById('chainCount').textContent = chainCount;
-    document.getElementById('tokenCount').textContent = tokenCount;
-
-    tbody.innerHTML = '';
-    tokenList
-      .filter(tok => (tok.price || 0) * (tok.amount || 0) >= 0.01)
-      .sort((a, b) => (b.price || 0) * (b.amount || 0) - (a.price || 0) * (a.amount || 0))
-      .forEach(tok => {
-        const usd = (tok.price || 0) * (tok.amount || 0);
-        const symbol = tok.optimized_symbol || tok.symbol || tok.name || '?';
-        const chain = tok.chain || '—';
-        const protocol = tok.protocol_name || '—';
-        const openedAt = tok.opened_at || '—';
-        const daysOpen = tok.days_open != null ? String(tok.days_open) : '—';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>
-            <div class="token-cell">
-              ${tok.logo_url ? `<img src="${tok.logo_url}" alt="">` : ''}
-              <div>
-                <span class="symbol">${symbol}</span>
-                <div class="name">${tok.name || ''}</div>
-              </div>
-            </div>
-          </td>
-          <td>${chain}</td>
-          <td>${protocol}</td>
-          <td>${fmt(tok.amount)}</td>
-          <td class="usd-value">${fmtUsd(usd)}</td>
-          <td>${openedAt}</td>
-          <td>${daysOpen}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-    tableEl.style.display = 'block';
-    if (tbody.children.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noTokens + '</td></tr>';
+      document.getElementById('portfolioYieldWrap').style.display = 'none';
+      positionsTableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
   } catch (err) {
     loadingEl.style.display = 'none';
