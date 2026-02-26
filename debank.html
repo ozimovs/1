@@ -509,13 +509,17 @@ const ASSET_CHART_COLORS = ['#34d399','#60a5fa','#a78bfa','#38bdf8','#fbbf24','#
 const ASSET_CHART_COLORS_MUTED = ['#64748b','#94a3b8','#a1a1aa'];
 
 function filterPositions(positions) {
-  const totalOpenUsd = positions.reduce((sum, pos) => {
+  const validPositions = positions.filter((pos) => {
+    if (pos.fromManualOnly && (pos.total_usd == null || pos.total_usd < 0.01)) return false;
+    return true;
+  });
+  const totalOpenUsd = validPositions.reduce((sum, pos) => {
     const statusVal = (pos.status || 'open').toLowerCase();
     const isClosed = statusVal === 'close' || statusVal === 'closed';
     if (isClosed) return sum;
     return sum + (pos.total_usd ?? 0);
   }, 0);
-  return positions.filter((pos) => {
+  return validPositions.filter((pos) => {
     const statusVal = (pos.status || 'open').toLowerCase();
     const isClosed = statusVal === 'close' || statusVal === 'closed';
     if (isClosed) return true;
