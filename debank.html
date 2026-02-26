@@ -219,6 +219,12 @@
   .wallet-tokens-row { border-top: 2px solid var(--border); }
   .wallet-tokens-row td { color: var(--muted2); }
   .wallet-tokens-row .usd-value { color: var(--muted2); }
+  .protocol-link {
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-left: 6px; width: 16px; height: 16px; font-size: 10px; line-height: 1;
+    color: var(--muted2); text-decoration: none; opacity: 0.6; transition: opacity 0.15s, color 0.15s;
+  }
+  .protocol-link:hover { opacity: 1; color: var(--accent); }
   .portfolio-yield-wrap {
     display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 16px;
     background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: fit-content;
@@ -380,7 +386,7 @@ const t = {
     assetDistributionTitle: 'Распределение активов', lblOthers: 'Другие', lblTotalValue: 'Сумма', lblDeFiPortfolio: 'DeFi портфель',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
-    noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций', walletTokensRow: 'Токены на кошельке',
+    noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций', walletTokensRow: 'Токены на кошельке', otherPositionsRow: 'Прочие позиции',
     apiUnavailable: 'API недоступен. Разверните проект на Vercel и откройте сайт по Vercel-адресу.',
     apiHint: 'При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app',
     modalTitle: 'Редактировать позицию', modalLblDate: 'Дата открытия (ДД.ММ.ГГГГ)', modalLblInitial: 'Начальная сумма, USD',
@@ -396,7 +402,7 @@ const t = {
     assetDistributionTitle: 'Asset distribution', lblOthers: 'Others', lblTotalValue: 'Total', lblDeFiPortfolio: 'DeFi portfolio',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
-    noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions', walletTokensRow: 'Wallet tokens',
+    noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions', walletTokensRow: 'Wallet tokens', otherPositionsRow: 'Other positions',
     apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.',
     apiHint: 'If load fails: open debank.html?api=https://your-vercel.vercel.app',
     thPosStatus: 'St.',
@@ -519,22 +525,26 @@ function filterPositions(positions) {
     if (isClosed) return sum;
     return sum + (pos.total_usd ?? 0);
   }, 0);
-  return validPositions.filter((pos) => {
+  const shown = [];
+  const hidden = [];
+  validPositions.forEach((pos) => {
     const statusVal = (pos.status || 'open').toLowerCase();
     const isClosed = statusVal === 'close' || statusVal === 'closed';
-    if (isClosed) return true;
+    if (isClosed) { shown.push(pos); return; }
     const usd = pos.total_usd ?? 0;
-    if (totalOpenUsd < 0.01) return true;
+    if (totalOpenUsd < 0.01) { shown.push(pos); return; }
     const pct = (usd / totalOpenUsd) * 100;
-    return pct >= MIN_POSITION_PCT;
+    if (pct >= MIN_POSITION_PCT) { shown.push(pos); } else { hidden.push(pos); }
   });
+  const hiddenTotalUsd = hidden.reduce((s, p) => s + (p.total_usd ?? 0), 0);
+  return { shown, hidden, hiddenTotalUsd };
 }
 
 function computeAssetDistribution(positions) {
-  const filtered = filterPositions(positions);
+  const { shown } = filterPositions(positions);
   const bySymbol = {};
   let totalDeFiUsd = 0;
-  for (const pos of filtered) {
+  for (const pos of shown) {
     if (pos.fromManualOnly && (pos.total_usd == null || pos.total_usd < 0.01)) continue;
     totalDeFiUsd += pos.total_usd ?? 0;
     const tokens = pos.tokens || [];
@@ -889,7 +899,7 @@ async function loadAssets() {
     document.getElementById('tableWrap').style.display = 'none';
     document.getElementById('defiSkeleton').style.display = 'none';
 
-    const filteredPositions = filterPositions(positionsList);
+    const { shown: filteredPositions, hiddenTotalUsd } = filterPositions(positionsList);
     lastAssetPositions = positionsList;
     renderAssetChart(positionsList);
 
@@ -898,7 +908,7 @@ async function loadAssets() {
     const positionsTableWrap = document.getElementById('positionsTableWrap');
     const positionsTableBody = document.getElementById('positionsTableBody');
     positionsTableBody.innerHTML = '';
-    if (filteredPositions.length > 0 || walletTokensUsd >= 0.01) {
+    if (filteredPositions.length > 0 || walletTokensUsd >= 0.01 || hiddenTotalUsd >= 0.01) {
       positionsTableWrap.style.display = 'block';
       filteredPositions.forEach((pos) => {
         const tr = document.createElement('tr');
@@ -928,8 +938,10 @@ async function loadAssets() {
         const statusText = statusClass === 'close' ? 'close' : 'open';
         const editBtnText = t[lang].editBtn;
         const lbl = (ru, en) => lang === 'ru' ? ru : en;
+        const debankUrl = pos.chain && pos.protocol_id ? `https://debank.com/profile/${addrLower}/protocol/${pos.chain}/${pos.protocol_id}` : '';
+        const debankLink = debankUrl ? `<a href="${debankUrl}" target="_blank" rel="noopener" class="protocol-link" title="Open in DeBank">↗</a>` : '';
         tr.innerHTML = `
-          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span></div></td>
+          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span>${debankLink}</div></td>
           <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">${dateOpenDisplay}</td>
           <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">${initialDisplay}</td>
           <td class="text-right col-num" data-label="${lbl('Дней','Days')}">${daysOpenDisplay}</td>
@@ -945,6 +957,28 @@ async function loadAssets() {
         `;
         positionsTableBody.appendChild(tr);
       });
+
+      if (hiddenTotalUsd >= 0.01) {
+        const otherTr = document.createElement('tr');
+        otherTr.className = 'wallet-tokens-row';
+        const lbl = (ru, en) => lang === 'ru' ? ru : en;
+        otherTr.innerHTML = `
+          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell"><span class="symbol" style="color:var(--muted2)">${t[lang].otherPositionsRow}</span></div></td>
+          <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">—</td>
+          <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">—</td>
+          <td class="text-right col-num" data-label="${lbl('Дней','Days')}">—</td>
+          <td class="text-right col-num usd-value" data-label="${lbl('Стоимость $','Value $')}">${fmtUsd(hiddenTotalUsd)}</td>
+          <td class="text-left col-date" data-label="${lbl('Обновл.','Updated')}">—</td>
+          <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">—</td>
+          <td class="text-right col-num" data-label="${lbl('Прибыль','Profit')}">—</td>
+          <td class="text-right col-num" data-label="ROI">—</td>
+          <td class="text-right col-num" data-label="APY">—</td>
+          <td class="text-right col-num" data-label="${lbl('Тек.дох.','CurYld')}">—</td>
+          <td class="text-left col-status" data-label="${lbl('Состояние','Status')}">—</td>
+          <td class="col-edit"></td>
+        `;
+        positionsTableBody.appendChild(otherTr);
+      }
 
       if (walletTokensUsd >= 0.01) {
         const walletTr = document.createElement('tr');
