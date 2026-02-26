@@ -36,6 +36,7 @@ function flattenPositions(protocolList) {
     const protocolName = proto.name || protocolId || '—';
     const chain = proto.chain || '';
     const logoUrl = proto.logo_url || null;
+    const siteUrl = proto.site_url || null;
 
     const items = proto.portfolio_item_list || [];
     for (const item of items) {
@@ -79,6 +80,7 @@ function flattenPositions(protocolList) {
         protocol_id: protocolId,
         protocol_name: protocolName,
         protocol_logo_url: logoUrl,
+        protocol_site_url: siteUrl,
         position_type: positionType,
         position_name: item.name || '—',
         position_key: positionKey,
@@ -124,6 +126,7 @@ async function getManualOnlyClosedPositions(wallet) {
       protocol_id: parsed.protocolId,
       protocol_name: parsed.protocolId,
       protocol_logo_url: null,
+      protocol_site_url: null,
       position_type: 'other',
       position_name: parsed.protocolId,
       position_key: parsed.positionKey,

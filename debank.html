@@ -938,10 +938,10 @@ async function loadAssets() {
         const statusText = statusClass === 'close' ? 'close' : 'open';
         const editBtnText = t[lang].editBtn;
         const lbl = (ru, en) => lang === 'ru' ? ru : en;
-        const debankUrl = pos.chain && pos.protocol_id ? `https://debank.com/profile/${addrLower}/protocol/${pos.chain}/${pos.protocol_id}` : '';
-        const debankLink = debankUrl ? `<a href="${debankUrl}" target="_blank" rel="noopener" class="protocol-link" title="Open in DeBank">↗</a>` : '';
+        const protocolUrl = pos.protocol_site_url || '';
+        const protocolLink = protocolUrl ? `<a href="${protocolUrl}" target="_blank" rel="noopener" class="protocol-link" title="${pos.protocol_name}">↗</a>` : '';
         tr.innerHTML = `
-          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span>${debankLink}</div></td>
+          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span>${protocolLink}</div></td>
           <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">${dateOpenDisplay}</td>
           <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">${initialDisplay}</td>
           <td class="text-right col-num" data-label="${lbl('Дней','Days')}">${daysOpenDisplay}</td>
