@@ -209,12 +209,13 @@
     color: var(--muted2); text-decoration: none; opacity: 0.6; transition: opacity 0.15s, color 0.15s;
   }
   .protocol-link:hover { opacity: 1; color: var(--accent); }
-  .portfolio-yield-wrap {
-    display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 16px;
-    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: fit-content;
+  .portfolio-stats-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .portfolio-stat-card {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
   }
-  .portfolio-yield-label { font-family: 'Space Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--muted2); font-weight: 600; }
-  .portfolio-yield-value { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 800; color: var(--accent); }
+  .portfolio-stat-label { font-family: 'Space Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--muted2); font-weight: 600; }
+  .portfolio-stat-value { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 800; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -246,9 +247,15 @@
 
   <div class="defi-block" id="defiBlock" style="display:none;">
     <h2 class="section-title" id="sectionDefi">DeFi позиции</h2>
-    <div class="portfolio-yield-wrap" id="portfolioYieldWrap" style="display:none;">
-      <span class="portfolio-yield-label" id="portfolioYieldLabel">Текущая доходность портфеля</span>
-      <span class="portfolio-yield-value" id="portfolioYieldValue">—</span>
+    <div class="portfolio-stats-row" id="portfolioStatsRow" style="display:none;">
+      <div class="portfolio-stat-card">
+        <span class="portfolio-stat-label" id="portfolioYieldLabel">Текущая доходность портфеля</span>
+        <span class="portfolio-stat-value" id="portfolioYieldValue">—</span>
+      </div>
+      <div class="portfolio-stat-card">
+        <span class="portfolio-stat-label" id="openProtocolsLabel">Открытых протоколов</span>
+        <span class="portfolio-stat-value" id="openProtocolsValue">0</span>
+      </div>
     </div>
     <div class="defi-skeleton" id="defiSkeleton" style="display:none;">
       <div class="skeleton" style="height:140px;margin-bottom:16px;"></div>
@@ -367,7 +374,7 @@ const t = {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
-    thPosProtocol: 'Протокол', thPosDateOpen: 'Откр.', thPosInitial: 'Внесено $', thPosDays: 'Дней', thPosUsd: 'Стоимость $', thPosUpdated: 'Обновл.', thPosWithdrawn: 'Выведено $', thPosProfit: 'Прибыль $', thPosRoi: 'ROI', thPosApy: 'APY', thPosCurYld: 'Тек.дох.', thPosStatus: 'Сост.', lblPortfolioYield: 'Текущая доходность портфеля',
+    thPosProtocol: 'Протокол', thPosDateOpen: 'Откр.', thPosInitial: 'Внесено $', thPosDays: 'Дней', thPosUsd: 'Стоимость $', thPosUpdated: 'Обновл.', thPosWithdrawn: 'Выведено $', thPosProfit: 'Прибыль $', thPosRoi: 'ROI', thPosApy: 'APY', thPosCurYld: 'Тек.дох.', thPosStatus: 'Сост.', lblPortfolioYield: 'Текущая доходность', lblOpenProtocols: 'Открытых протоколов',
     assetDistributionTitle: 'Диверсификация по активам', thAssetName: 'Актив', thAssetUsd: 'Сумма', thAssetPct: 'Доля', lblOthers: 'Другие', lblTotalValue: 'Сумма', lblDeFiPortfolio: 'DeFi портфель',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
@@ -383,7 +390,7 @@ const t = {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
-    thPosProtocol: 'Protocol', thPosDateOpen: 'Open', thPosInitial: 'Deposit $', thPosDays: 'Days', thPosUsd: 'Value $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn $', thPosProfit: 'Profit $', thPosRoi: 'ROI', thPosApy: 'APY', thPosCurYld: 'CurYld', lblPortfolioYield: 'Portfolio current yield',
+    thPosProtocol: 'Protocol', thPosDateOpen: 'Open', thPosInitial: 'Deposit $', thPosDays: 'Days', thPosUsd: 'Value $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn $', thPosProfit: 'Profit $', thPosRoi: 'ROI', thPosApy: 'APY', thPosCurYld: 'CurYld', lblPortfolioYield: 'Current yield', lblOpenProtocols: 'Open protocols',
     assetDistributionTitle: 'Asset diversification', thAssetName: 'Asset', thAssetUsd: 'Amount', thAssetPct: 'Share', lblOthers: 'Others', lblTotalValue: 'Total', lblDeFiPortfolio: 'DeFi portfolio',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
@@ -971,16 +978,21 @@ async function loadAssets() {
           portfolioYieldWeight += pos.total_usd;
         }
       });
-      const portfolioYieldWrap = document.getElementById('portfolioYieldWrap');
+      const portfolioStatsRow = document.getElementById('portfolioStatsRow');
       const portfolioYieldLabel = document.getElementById('portfolioYieldLabel');
       const portfolioYieldValue = document.getElementById('portfolioYieldValue');
+      const openProtocolsLabel = document.getElementById('openProtocolsLabel');
+      const openProtocolsValue = document.getElementById('openProtocolsValue');
+      const openCount = filteredPositions.filter(p => p.status === 'open').length;
+      portfolioStatsRow.style.display = 'flex';
+      openProtocolsLabel.textContent = t[lang].lblOpenProtocols;
+      openProtocolsValue.textContent = openCount;
       if (portfolioYieldWeight > 0) {
         const portfolioYield = portfolioYieldSum / portfolioYieldWeight;
-        portfolioYieldWrap.style.display = 'flex';
         portfolioYieldLabel.textContent = t[lang].lblPortfolioYield;
         portfolioYieldValue.textContent = fmtCurYld(portfolioYield);
       } else {
-        portfolioYieldWrap.style.display = 'none';
+        portfolioYieldValue.textContent = '—';
       }
 
       document.getElementById('positionsTableWrap').dataset.base = base;
@@ -988,7 +1000,7 @@ async function loadAssets() {
       bindPositionEdits(fmtUsd);
     } else {
       positionsTableWrap.style.display = 'block';
-      document.getElementById('portfolioYieldWrap').style.display = 'none';
+      document.getElementById('portfolioStatsRow').style.display = 'none';
       positionsTableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
   } catch (err) {
