@@ -105,7 +105,7 @@ async function getManualRecord(wallet, pos) {
   }
 }
 
-async function getManualOnlyClosedPositions(wallet) {
+async function getFullyManualPositions(wallet) {
   const { redisGet, redisKeys } = require('../lib/redis');
   const prefix = `manual:${wallet}:`;
   const keys = await redisKeys(prefix + '*');
@@ -115,33 +115,47 @@ async function getManualOnlyClosedPositions(wallet) {
     if (!parsed) continue;
     const manual = await redisGet(key);
     if (!manual || typeof manual !== 'object') continue;
+
+    const isFullyManual = manual.isFullyManual === true;
     const status = (manual.status || 'open').toLowerCase();
-    if (status !== 'close' && status !== 'closed') continue;
+    const statusVal = (status === 'close' || status === 'closed') ? 'close' : 'open';
+
+    if (!isFullyManual && statusVal !== 'close') continue;
+
     const manualOpenedAt = manual?.openedAt ?? manual?.opened_at_manual ?? null;
     const manualInitialUsd = manual?.initialDepositUsd ?? manual?.initial_deposit_usd ?? null;
-    const withdrawnUsd = manual?.withdrawnUsd ?? null;
+    const withdrawnUsd = manual?.withdrawnUsd ?? 0;
+    const currentValueUsd = manual?.currentValueUsd ?? 0;
+    const protocolName = manual?.protocolName || parsed.protocolId;
+    const tokenSymbol = manual?.tokenSymbol || null;
+    const description = manual?.description || null;
+
     positions.push({
       wallet,
       chain: parsed.chain,
       protocol_id: parsed.protocolId,
-      protocol_name: parsed.protocolId,
+      protocol_name: protocolName,
       protocol_logo_url: null,
       protocol_site_url: null,
       position_type: 'other',
-      position_name: parsed.protocolId,
+      position_name: protocolName,
       position_key: parsed.positionKey,
-      tokens: [],
-      total_usd: 0,
+      tokens: tokenSymbol ? [{ symbol: tokenSymbol, amount: 0, amount_usd: currentValueUsd }] : [],
+      total_usd: currentValueUsd,
       manualOpenedAt: manualOpenedAt || null,
       manualInitialUsd: manualInitialUsd ?? null,
       withdrawnUsd: withdrawnUsd ?? 0,
-      status: 'close',
+      currentValueUsd: currentValueUsd,
+      tokenSymbol: tokenSymbol,
+      description: description,
+      status: statusVal,
       daysOpen: null,
       profitUsd: null,
       roiPercent: null,
       apyPercent: null,
       lastUpdateDate: null,
       fromManualOnly: true,
+      isFullyManual: isFullyManual,
     });
   }
   return positions;
@@ -239,8 +253,8 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const manualOnlyClosed = await getManualOnlyClosedPositions(id);
-    for (const mp of manualOnlyClosed) {
+    const fullyManualPositions = await getFullyManualPositions(id);
+    for (const mp of fullyManualPositions) {
       const key = `${mp.chain}:${mp.protocol_id}:${mp.position_key}`;
       if (debankKeySet.has(key)) continue;
       const totalWithValue = (mp.total_usd || 0) + (mp.withdrawnUsd || 0);

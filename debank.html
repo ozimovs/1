@@ -216,6 +216,14 @@
   }
   .portfolio-stat-label { font-family: 'Space Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--muted2); font-weight: 600; }
   .portfolio-stat-value { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 800; color: var(--accent); }
+  .defi-header-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .defi-header-row .section-title { margin-bottom: 0; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #dc2626; }
+  .manual-position { background: rgba(148, 163, 184, 0.08); }
+  [data-theme="light"] .manual-position { background: rgba(100, 116, 139, 0.06); }
+  .manual-marker { display: inline-block; font-size: 9px; font-weight: 700; color: var(--muted2); background: rgba(148, 163, 184, 0.2); padding: 1px 4px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -246,7 +254,10 @@
   </div>
 
   <div class="defi-block" id="defiBlock" style="display:none;">
-    <h2 class="section-title" id="sectionDefi">DeFi позиции</h2>
+    <div class="defi-header-row">
+      <h2 class="section-title" id="sectionDefi">DeFi позиции</h2>
+      <button class="btn btn-secondary btn-sm" id="btnAddManual" style="display:none;">+ Добавить</button>
+    </div>
     <div class="portfolio-stats-row" id="portfolioStatsRow" style="display:none;">
       <div class="portfolio-stat-card">
         <span class="portfolio-stat-label" id="portfolioYieldLabel">Текущая доходность портфеля</span>
@@ -362,6 +373,57 @@
       </div>
     </div>
   </div>
+
+  <div class="modal-overlay" id="manualPositionModal">
+    <div class="modal-box">
+      <h3 id="manualModalTitle">Добавить позицию</h3>
+      <div class="form-group">
+        <label id="manualLblChain">Сеть / блокчейн</label>
+        <input type="text" id="manualChain" placeholder="solana, ton, eth..." />
+      </div>
+      <div class="form-group">
+        <label id="manualLblProtocol">Название протокола</label>
+        <input type="text" id="manualProtocol" placeholder="Kamino, STON.fi..." />
+      </div>
+      <div class="form-group">
+        <label id="manualLblToken">Токен / пара (опционально)</label>
+        <input type="text" id="manualToken" placeholder="SOL/USDC, TON..." />
+      </div>
+      <div class="form-group">
+        <label id="manualLblInitial">Сумма входа, USD</label>
+        <input type="number" id="manualInitial" step="0.01" min="0" placeholder="0" />
+      </div>
+      <div class="form-group">
+        <label id="manualLblCurrentValue">Текущая стоимость, USD</label>
+        <input type="number" id="manualCurrentValue" step="0.01" min="0" placeholder="0" />
+      </div>
+      <div class="form-group">
+        <label id="manualLblDate">Дата открытия</label>
+        <input type="date" id="manualDate" />
+      </div>
+      <div class="form-group">
+        <label id="manualLblWithdrawn">Выведено, USD</label>
+        <input type="number" id="manualWithdrawn" step="0.01" min="0" placeholder="0" />
+      </div>
+      <div class="form-group">
+        <label id="manualLblStatus">Статус</label>
+        <select id="manualStatus">
+          <option value="open">open</option>
+          <option value="close">close</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label id="manualLblDescription">Комментарий (опционально)</label>
+        <input type="text" id="manualDescription" placeholder="" />
+      </div>
+      <div class="modal-status" id="manualModalStatus"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="manualModalCancel">Отмена</button>
+        <button class="btn btn-danger" id="manualModalDelete" style="display:none;">Удалить</button>
+        <button class="btn btn-primary" id="manualModalSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -384,7 +446,13 @@ const t = {
     modalTitle: 'Редактировать позицию', modalLblDate: 'Дата открытия (ДД.ММ.ГГГГ)', modalLblInitial: 'Начальная сумма, USD',
     modalLblWithdrawn: 'Выведено, USD', modalLblStatus: 'Состояние',
     modalCancel: 'Отмена', modalSave: 'Сохранить', modalSaving: 'Сохранение...', modalSaved: 'Сохранено',
-    modalError: 'Ошибка сохранения', editBtn: '✏️'
+    modalError: 'Ошибка сохранения', editBtn: '✏️',
+    btnAddManual: '+ Добавить', manualModalTitleAdd: 'Добавить позицию', manualModalTitleEdit: 'Редактировать позицию',
+    manualLblChain: 'Сеть / блокчейн', manualLblProtocol: 'Название протокола', manualLblToken: 'Токен / пара (опц.)',
+    manualLblInitial: 'Сумма входа, USD', manualLblCurrentValue: 'Текущая стоимость, USD', manualLblDate: 'Дата открытия',
+    manualLblWithdrawn: 'Выведено, USD', manualLblStatus: 'Статус', manualLblDescription: 'Комментарий (опц.)',
+    manualErrorChain: 'Укажите сеть', manualErrorProtocol: 'Укажите протокол', confirmDelete: 'Удалить эту позицию?',
+    manualModalDelete: 'Удалить'
   },
   en: {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
@@ -401,7 +469,13 @@ const t = {
     modalTitle: 'Edit position', modalLblDate: 'Date opened (DD.MM.YYYY)', modalLblInitial: 'Initial amount, USD',
     modalLblWithdrawn: 'Withdrawn, USD', modalLblStatus: 'Status',
     modalCancel: 'Cancel', modalSave: 'Save', modalSaving: 'Saving...', modalSaved: 'Saved',
-    modalError: 'Save failed', editBtn: '✏️'
+    modalError: 'Save failed', editBtn: '✏️',
+    btnAddManual: '+ Add', manualModalTitleAdd: 'Add position', manualModalTitleEdit: 'Edit position',
+    manualLblChain: 'Chain / blockchain', manualLblProtocol: 'Protocol name', manualLblToken: 'Token / pair (opt.)',
+    manualLblInitial: 'Deposit, USD', manualLblCurrentValue: 'Current value, USD', manualLblDate: 'Date opened',
+    manualLblWithdrawn: 'Withdrawn, USD', manualLblStatus: 'Status', manualLblDescription: 'Comment (opt.)',
+    manualErrorChain: 'Enter chain', manualErrorProtocol: 'Enter protocol', confirmDelete: 'Delete this position?',
+    manualModalDelete: 'Delete'
   }
 };
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
@@ -450,6 +524,18 @@ function setLang(v) {
     const el = document.getElementById(id);
     if (el) el.textContent = t[lang][id];
   });
+  ['manualLblChain','manualLblProtocol','manualLblToken','manualLblInitial','manualLblCurrentValue','manualLblDate','manualLblWithdrawn','manualLblStatus','manualLblDescription'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t[lang][id];
+  });
+  const manualModalCancel = document.getElementById('manualModalCancel');
+  const manualModalSave = document.getElementById('manualModalSave');
+  const manualModalDelete = document.getElementById('manualModalDelete');
+  const btnAddManual = document.getElementById('btnAddManual');
+  if (manualModalCancel) manualModalCancel.textContent = t[lang].modalCancel;
+  if (manualModalSave) manualModalSave.textContent = t[lang].modalSave;
+  if (manualModalDelete) manualModalDelete.textContent = t[lang].manualModalDelete;
+  if (btnAddManual) btnAddManual.textContent = t[lang].btnAddManual;
   const editBtns = document.querySelectorAll('.edit-row-btn');
   editBtns.forEach(b => b.textContent = t[lang].editBtn);
   if (lastAssetPositions && lastAssetPositions.length > 0) renderAssetChart(lastAssetPositions);
@@ -653,6 +739,12 @@ function bindPositionEdits(fmtUsd) {
     const tr = btn.closest('tr');
     if (!tr || !tr.dataset.pos) return;
     const pos = JSON.parse(tr.dataset.pos || '{}');
+
+    if (pos.isFullyManual && typeof window.openManualEditModal === 'function') {
+      window.openManualEditModal(pos);
+      return;
+    }
+
     currentTr = tr;
     const base = tableWrap.dataset.base || window.location.origin;
     tableWrap.dataset._editBase = base;
@@ -750,6 +842,177 @@ function bindPositionEdits(fmtUsd) {
       modalStatusMsg.className = 'modal-status error';
     } finally {
       modalSave.disabled = false;
+    }
+  });
+}
+
+function bindManualPositionModal(base, wallet) {
+  const btnAdd = document.getElementById('btnAddManual');
+  const modal = document.getElementById('manualPositionModal');
+  const modalTitle = document.getElementById('manualModalTitle');
+  const chainInput = document.getElementById('manualChain');
+  const protocolInput = document.getElementById('manualProtocol');
+  const tokenInput = document.getElementById('manualToken');
+  const initialInput = document.getElementById('manualInitial');
+  const currentValueInput = document.getElementById('manualCurrentValue');
+  const dateInput = document.getElementById('manualDate');
+  const withdrawnInput = document.getElementById('manualWithdrawn');
+  const statusSelect = document.getElementById('manualStatus');
+  const descriptionInput = document.getElementById('manualDescription');
+  const statusMsg = document.getElementById('manualModalStatus');
+  const btnCancel = document.getElementById('manualModalCancel');
+  const btnDelete = document.getElementById('manualModalDelete');
+  const btnSave = document.getElementById('manualModalSave');
+
+  if (!btnAdd || !modal || btnAdd.dataset.bound) return;
+  btnAdd.dataset.bound = '1';
+  btnAdd.style.display = 'inline-flex';
+
+  let editingPosition = null;
+
+  function openModal(pos = null) {
+    editingPosition = pos;
+    if (pos) {
+      modalTitle.textContent = t[lang].manualModalTitleEdit || 'Редактировать позицию';
+      chainInput.value = pos.chain || '';
+      protocolInput.value = pos.protocol_name || '';
+      tokenInput.value = pos.tokenSymbol || '';
+      initialInput.value = pos.manualInitialUsd != null ? pos.manualInitialUsd : '';
+      currentValueInput.value = pos.currentValueUsd != null ? pos.currentValueUsd : (pos.total_usd || '');
+      dateInput.value = pos.manualOpenedAt ? String(pos.manualOpenedAt).slice(0, 10) : '';
+      withdrawnInput.value = pos.withdrawnUsd || '';
+      statusSelect.value = pos.status || 'open';
+      descriptionInput.value = pos.description || '';
+      btnDelete.style.display = pos.isFullyManual ? 'inline-flex' : 'none';
+    } else {
+      modalTitle.textContent = t[lang].manualModalTitleAdd || 'Добавить позицию';
+      chainInput.value = '';
+      protocolInput.value = '';
+      tokenInput.value = '';
+      initialInput.value = '';
+      currentValueInput.value = '';
+      dateInput.value = new Date().toISOString().slice(0, 10);
+      withdrawnInput.value = '';
+      statusSelect.value = 'open';
+      descriptionInput.value = '';
+      btnDelete.style.display = 'none';
+    }
+    statusMsg.textContent = '';
+    statusMsg.className = 'modal-status';
+    modal.classList.add('open');
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    editingPosition = null;
+    statusMsg.textContent = '';
+    statusMsg.className = 'modal-status';
+  }
+
+  btnAdd.addEventListener('click', () => openModal(null));
+  btnCancel.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  window.openManualEditModal = function(pos) {
+    openModal(pos);
+  };
+
+  btnDelete.addEventListener('click', async () => {
+    if (!editingPosition || !editingPosition.isFullyManual) return;
+    const confirmMsg = t[lang].confirmDelete || 'Удалить эту позицию?';
+    if (!confirm(confirmMsg)) return;
+
+    btnDelete.disabled = true;
+    try {
+      const res = await fetch(base + '/api/defi-position-manual', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: wallet,
+          chain: editingPosition.chain,
+          protocolId: editingPosition.protocol_id,
+          positionKey: editingPosition.position_key
+        })
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      closeModal();
+      loadAssets();
+    } catch (err) {
+      statusMsg.textContent = (t[lang].modalError || 'Ошибка') + ': ' + (err.message || err);
+      statusMsg.className = 'modal-status error';
+    } finally {
+      btnDelete.disabled = false;
+    }
+  });
+
+  btnSave.addEventListener('click', async () => {
+    const chain = chainInput.value.trim().toLowerCase().replace(/\s+/g, '_');
+    const protocolName = protocolInput.value.trim();
+    const tokenSymbol = tokenInput.value.trim() || null;
+    const initialVal = initialInput.value.trim();
+    const currentVal = currentValueInput.value.trim();
+    const dateVal = dateInput.value.trim();
+    const withdrawnVal = withdrawnInput.value.trim();
+    const statusVal = statusSelect.value;
+    const descriptionVal = descriptionInput.value.trim() || null;
+
+    if (!chain) {
+      statusMsg.textContent = t[lang].manualErrorChain || 'Укажите сеть';
+      statusMsg.className = 'modal-status error';
+      return;
+    }
+    if (!protocolName) {
+      statusMsg.textContent = t[lang].manualErrorProtocol || 'Укажите протокол';
+      statusMsg.className = 'modal-status error';
+      return;
+    }
+
+    btnSave.disabled = true;
+    statusMsg.textContent = t[lang].modalSaving || 'Сохранение...';
+    statusMsg.className = 'modal-status';
+
+    try {
+      const protocolId = protocolName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const positionKey = editingPosition
+        ? editingPosition.position_key
+        : 'manual_' + Date.now();
+
+      const payload = {
+        wallet: wallet,
+        chain: chain,
+        protocolId: protocolId,
+        positionKey: positionKey,
+        isFullyManual: true,
+        protocolName: protocolName,
+        tokenSymbol: tokenSymbol,
+        openedAt: dateVal || null,
+        initialDepositUsd: initialVal ? Number(initialVal) : null,
+        currentValueUsd: currentVal ? Number(currentVal) : null,
+        withdrawnUsd: withdrawnVal ? Number(withdrawnVal) : null,
+        status: statusVal,
+        description: descriptionVal
+      };
+
+      const res = await fetch(base + '/api/defi-position-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Save failed');
+      }
+
+      statusMsg.textContent = t[lang].modalSaved || 'Сохранено';
+      statusMsg.className = 'modal-status success';
+      closeModal();
+      loadAssets();
+    } catch (err) {
+      statusMsg.textContent = (t[lang].modalError || 'Ошибка') + ': ' + (err.message || err);
+      statusMsg.className = 'modal-status error';
+    } finally {
+      btnSave.disabled = false;
     }
   });
 }
@@ -881,6 +1144,7 @@ async function loadAssets() {
         const tr = document.createElement('tr');
         tr.dataset.pos = JSON.stringify(pos);
         tr.dataset.wallet = addrLower;
+        if (pos.isFullyManual) tr.classList.add('manual-position');
         const dateOpenDisplay = pos.manualOpenedAt ? fmtDateDDMMYYYY(pos.manualOpenedAt) : '—';
         const daysOpenDisplay = pos.daysOpen != null ? String(pos.daysOpen) : '—';
         const initialDisplay = pos.manualInitialUsd != null ? fmtUsd(pos.manualInitialUsd) : '—';
@@ -907,8 +1171,9 @@ async function loadAssets() {
         const lbl = (ru, en) => lang === 'ru' ? ru : en;
         const protocolUrl = pos.protocol_site_url || '';
         const protocolLink = protocolUrl ? `<a href="${protocolUrl}" target="_blank" rel="noopener" class="protocol-link" title="${pos.protocol_name}">↗</a>` : '';
+        const manualMarker = pos.isFullyManual ? `<span class="manual-marker">M</span>` : '';
         tr.innerHTML = `
-          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span>${protocolLink}</div></td>
+          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span>${manualMarker}${protocolLink}</div></td>
           <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">${dateOpenDisplay}</td>
           <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">${initialDisplay}</td>
           <td class="text-right col-num" data-label="${lbl('Дней','Days')}">${daysOpenDisplay}</td>
@@ -998,9 +1263,12 @@ async function loadAssets() {
       document.getElementById('positionsTableWrap').dataset.base = base;
       document.getElementById('positionsTableWrap').dataset.wallet = addrLower;
       bindPositionEdits(fmtUsd);
+      bindManualPositionModal(base, addrLower);
     } else {
       positionsTableWrap.style.display = 'block';
       document.getElementById('portfolioStatsRow').style.display = 'none';
+      document.getElementById('btnAddManual').style.display = 'inline-flex';
+      bindManualPositionModal(base, addrLower);
       positionsTableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
   } catch (err) {
