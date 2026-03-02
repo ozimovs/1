@@ -224,6 +224,8 @@
   .manual-position { background: rgba(148, 163, 184, 0.08); }
   [data-theme="light"] .manual-position { background: rgba(100, 116, 139, 0.06); }
   .manual-marker { display: inline-block; font-size: 9px; font-weight: 700; color: var(--muted2); background: rgba(148, 163, 184, 0.2); padding: 1px 4px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+  .debank-gone { border-left: 3px solid var(--warn); }
+  .debank-gone-hint { font-size: 9px; color: var(--warn); margin-left: 6px; }
   .position-filter { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
   .position-filter .filter-btn { padding: 6px 12px; font-size: 12px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted2); cursor: pointer; transition: all 0.15s; }
   .position-filter .filter-btn:hover { color: var(--text); }
@@ -462,7 +464,8 @@ const t = {
     manualLblWithdrawn: 'Выведено, USD', manualLblStatus: 'Статус', manualLblDescription: 'Комментарий (опц.)',
     manualErrorChain: 'Укажите сеть', manualErrorProtocol: 'Укажите протокол', confirmDelete: 'Удалить эту позицию?',
     manualModalDelete: 'Удалить',
-    filterAll: 'Все', filterOpen: 'Открытые', filterClosed: 'Закрытые'
+    filterAll: 'Все', filterOpen: 'Открытые', filterClosed: 'Закрытые',
+    debankGoneHint: 'DeBank больше не показывает — укажите статус close'
   },
   en: {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
@@ -486,7 +489,8 @@ const t = {
     manualLblWithdrawn: 'Withdrawn, USD', manualLblStatus: 'Status', manualLblDescription: 'Comment (opt.)',
     manualErrorChain: 'Enter chain', manualErrorProtocol: 'Enter protocol', confirmDelete: 'Delete this position?',
     manualModalDelete: 'Delete',
-    filterAll: 'All', filterOpen: 'Open', filterClosed: 'Closed'
+    filterAll: 'All', filterOpen: 'Open', filterClosed: 'Closed',
+    debankGoneHint: 'DeBank no longer shows — set status to close'
   }
 };
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
@@ -611,6 +615,9 @@ const ASSET_CHART_COLORS_MUTED = ['#64748b','#94a3b8','#a1a1aa'];
 
 function filterPositions(positions) {
   const validPositions = positions.filter((pos) => {
+    const statusVal = (pos.status || 'open').toLowerCase();
+    const isClosed = statusVal === 'close' || statusVal === 'closed';
+    if (isClosed) return true;
     if (pos.fromManualOnly && (pos.total_usd == null || pos.total_usd < 0.01)) return false;
     return true;
   });
@@ -801,6 +808,7 @@ function bindPositionEdits(fmtUsd) {
         positionKey: pos.position_key || 'default',
         openedAt: dateVal || null,
         initialDepositUsd: initialVal ? Number(initialVal) : null,
+        currentValueUsd: pos.total_usd != null ? Number(pos.total_usd) : null,
         withdrawnUsd: withdrawnVal ? Number(withdrawnVal) : null,
         status: statusVal
       };
@@ -1062,6 +1070,7 @@ function renderPositionsTable(filter, data) {
     tr.dataset.pos = JSON.stringify(pos);
     tr.dataset.wallet = addrLower;
     if (pos.isFullyManual) tr.classList.add('manual-position');
+    if (pos.debankGone) tr.classList.add('debank-gone');
     const dateOpenDisplay = pos.manualOpenedAt ? fmtDateDDMMYYYY(pos.manualOpenedAt) : '—';
     const daysOpenDisplay = pos.daysOpen != null ? String(pos.daysOpen) : '—';
     const initialDisplay = pos.manualInitialUsd != null ? fmtUsd(pos.manualInitialUsd) : '—';
@@ -1088,9 +1097,10 @@ function renderPositionsTable(filter, data) {
     const lbl = (ru, en) => lang === 'ru' ? ru : en;
     const protocolUrl = pos.protocol_site_url || '';
     const protocolLink = protocolUrl ? `<a href="${protocolUrl}" target="_blank" rel="noopener" class="protocol-link" title="${pos.protocol_name}">↗</a>` : '';
-    const manualMarker = pos.isFullyManual ? `<span class="manual-marker">M</span>` : '';
-    tr.innerHTML = `
-      <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span>${manualMarker}${protocolLink}</div></td>
+        const manualMarker = pos.isFullyManual ? `<span class="manual-marker">M</span>` : '';
+        const debankGoneHint = pos.debankGone ? `<span class="debank-gone-hint" title="${t[lang].debankGoneHint || 'DeBank больше не показывает эту позицию — укажите статус close вручную'}">!</span>` : '';
+        tr.innerHTML = `
+          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span>${manualMarker}${debankGoneHint}${protocolLink}</div></td>
       <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">${dateOpenDisplay}</td>
       <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">${initialDisplay}</td>
       <td class="text-right col-num" data-label="${lbl('Дней','Days')}">${daysOpenDisplay}</td>

@@ -94,6 +94,71 @@ function flattenPositions(protocolList) {
 }
 
 const { makeManualKey, parseManualKey } = require('../lib/position-key');
+const CACHE_KEY_PREFIX = 'debank_last:';
+
+async function getDebankCache(wallet) {
+  try {
+    const { redisGet } = require('../lib/redis');
+    const cached = await redisGet(CACHE_KEY_PREFIX + wallet);
+    return cached && typeof cached === 'object' && Array.isArray(cached.positions) ? cached : null;
+  } catch {
+    return null;
+  }
+}
+
+async function setDebankCache(wallet, rawPositions) {
+  try {
+    const { redisSet } = require('../lib/redis');
+    await redisSet(CACHE_KEY_PREFIX + wallet, {
+      positions: rawPositions,
+      fetchedAt: new Date().toISOString(),
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+function buildMergedPosition(p, id, manual, nowSec, lastUpdateDate) {
+  const manualOpenedAt = manual?.openedAt ?? manual?.opened_at_manual ?? null;
+  const manualInitialUsd = manual?.initialDepositUsd ?? manual?.initial_deposit_usd ?? null;
+  const withdrawnUsd = manual?.withdrawnUsd ?? 0;
+  const status = (manual?.status || 'open').toLowerCase();
+  const statusVal = (status === 'close' || status === 'closed') ? 'close' : 'open';
+  let daysOpen = null;
+  if (manualOpenedAt) {
+    const dateStr = String(manualOpenedAt).slice(0, 10);
+    const effectiveSec = Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000);
+    daysOpen = Math.max(0, Math.floor((nowSec - effectiveSec) / SEC_PER_DAY));
+  }
+  const totalUsd = manual?.currentValueUsd ?? p.total_usd ?? 0;
+  const totalWithValue = totalUsd + (withdrawnUsd || 0);
+  let profitUsd = null;
+  let roiPercent = null;
+  let apyPercent = null;
+  if (manualInitialUsd != null && manualInitialUsd > 0) {
+    profitUsd = totalWithValue - manualInitialUsd;
+    roiPercent = (totalWithValue / manualInitialUsd - 1) * 100;
+    if (daysOpen != null && daysOpen >= 1) {
+      const roi = totalWithValue / manualInitialUsd - 1;
+      apyPercent = ((1 + roi) ** (365 / daysOpen) - 1) * 100;
+    }
+  }
+  return {
+    ...p,
+    wallet: id,
+    total_usd: totalUsd,
+    manualOpenedAt: manualOpenedAt || null,
+    manualInitialUsd: manualInitialUsd ?? null,
+    withdrawnUsd: withdrawnUsd ?? 0,
+    status: statusVal,
+    daysOpen,
+    profitUsd,
+    roiPercent,
+    apyPercent,
+    lastUpdateDate,
+    fromManualOnly: false,
+  };
+}
 
 async function getManualRecord(wallet, pos) {
   try {
@@ -211,52 +276,29 @@ module.exports = async function handler(req, res) {
     const positions = [];
     for (const p of rawPositions) {
       const manual = await getManualRecord(id, p);
-      const manualOpenedAt = manual?.openedAt ?? manual?.opened_at_manual ?? null;
-      const manualInitialUsd = manual?.initialDepositUsd ?? manual?.initial_deposit_usd ?? null;
-      const withdrawnUsd = manual?.withdrawnUsd ?? 0;
-      const status = (manual?.status || 'open').toLowerCase();
-      const statusVal = (status === 'close' || status === 'closed') ? 'close' : 'open';
-
-      let daysOpen = null;
-      if (manualOpenedAt) {
-        const dateStr = String(manualOpenedAt).slice(0, 10);
-        const effectiveSec = Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000);
-        daysOpen = Math.max(0, Math.floor((nowSec - effectiveSec) / SEC_PER_DAY));
-      }
-
-      const totalWithValue = p.total_usd + (withdrawnUsd || 0);
-      let profitUsd = null;
-      let roiPercent = null;
-      let apyPercent = null;
-      if (manualInitialUsd != null && manualInitialUsd > 0) {
-        profitUsd = totalWithValue - manualInitialUsd;
-        roiPercent = (totalWithValue / manualInitialUsd - 1) * 100;
-        if (daysOpen != null && daysOpen >= 1) {
-          const roi = totalWithValue / manualInitialUsd - 1;
-          apyPercent = ((1 + roi) ** (365 / daysOpen) - 1) * 100;
-        }
-      }
-
-      positions.push({
-        ...p,
-        wallet: id,
-        manualOpenedAt: manualOpenedAt || null,
-        manualInitialUsd: manualInitialUsd ?? null,
-        withdrawnUsd: withdrawnUsd ?? 0,
-        status: statusVal,
-        daysOpen,
-        profitUsd,
-        roiPercent,
-        apyPercent,
-        lastUpdateDate,
-        fromManualOnly: false,
-      });
+      positions.push(buildMergedPosition(p, id, manual, nowSec, lastUpdateDate));
     }
+
+    const disappearedKeySet = new Set();
+    const cache = await getDebankCache(id);
+    if (cache && Array.isArray(cache.positions)) {
+      for (const p of cache.positions) {
+        const key = `${p.chain}:${p.protocol_id}:${p.position_key}`;
+        if (debankKeySet.has(key)) continue;
+        disappearedKeySet.add(key);
+        const manual = await getManualRecord(id, p);
+        const merged = buildMergedPosition(p, id, manual, nowSec, lastUpdateDate);
+        merged.debankGone = true;
+        merged.fromManualOnly = !manual;
+        positions.push(merged);
+      }
+    }
+    setDebankCache(id, rawPositions);
 
     const fullyManualPositions = await getFullyManualPositions(id);
     for (const mp of fullyManualPositions) {
       const key = `${mp.chain}:${mp.protocol_id}:${mp.position_key}`;
-      if (debankKeySet.has(key)) continue;
+      if (debankKeySet.has(key) || disappearedKeySet.has(key)) continue;
       const totalWithValue = (mp.total_usd || 0) + (mp.withdrawnUsd || 0);
       if (mp.manualInitialUsd != null && mp.manualInitialUsd > 0) {
         mp.profitUsd = totalWithValue - mp.manualInitialUsd;
