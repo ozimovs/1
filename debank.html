@@ -224,6 +224,10 @@
   .manual-position { background: rgba(148, 163, 184, 0.08); }
   [data-theme="light"] .manual-position { background: rgba(100, 116, 139, 0.06); }
   .manual-marker { display: inline-block; font-size: 9px; font-weight: 700; color: var(--muted2); background: rgba(148, 163, 184, 0.2); padding: 1px 4px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+  .position-filter { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .position-filter .filter-btn { padding: 6px 12px; font-size: 12px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted2); cursor: pointer; transition: all 0.15s; }
+  .position-filter .filter-btn:hover { color: var(--text); }
+  .position-filter .filter-btn.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -271,6 +275,11 @@
     <div class="defi-skeleton" id="defiSkeleton" style="display:none;">
       <div class="skeleton" style="height:140px;margin-bottom:16px;"></div>
       <div class="skeleton" style="height:200px;"></div>
+    </div>
+    <div class="position-filter" id="positionFilter" style="display:none;">
+      <button class="filter-btn active" data-filter="all" id="filterAll">Все</button>
+      <button class="filter-btn" data-filter="open" id="filterOpen">Открытые</button>
+      <button class="filter-btn" data-filter="closed" id="filterClosed">Закрытые</button>
     </div>
     <div class="defi-table-wrap" id="positionsTableWrap" style="display:none;">
       <table>
@@ -452,7 +461,8 @@ const t = {
     manualLblInitial: 'Сумма входа, USD', manualLblCurrentValue: 'Текущая стоимость, USD', manualLblDate: 'Дата открытия',
     manualLblWithdrawn: 'Выведено, USD', manualLblStatus: 'Статус', manualLblDescription: 'Комментарий (опц.)',
     manualErrorChain: 'Укажите сеть', manualErrorProtocol: 'Укажите протокол', confirmDelete: 'Удалить эту позицию?',
-    manualModalDelete: 'Удалить'
+    manualModalDelete: 'Удалить',
+    filterAll: 'Все', filterOpen: 'Открытые', filterClosed: 'Закрытые'
   },
   en: {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
@@ -475,12 +485,15 @@ const t = {
     manualLblInitial: 'Deposit, USD', manualLblCurrentValue: 'Current value, USD', manualLblDate: 'Date opened',
     manualLblWithdrawn: 'Withdrawn, USD', manualLblStatus: 'Status', manualLblDescription: 'Comment (opt.)',
     manualErrorChain: 'Enter chain', manualErrorProtocol: 'Enter protocol', confirmDelete: 'Delete this position?',
-    manualModalDelete: 'Delete'
+    manualModalDelete: 'Delete',
+    filterAll: 'All', filterOpen: 'Open', filterClosed: 'Closed'
   }
 };
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
 let theme = localStorage.getItem(THEME_KEY) || 'dark';
 let lastAssetPositions = null;
+let lastPositionFilter = 'all';
+let lastPositionsData = null;
 
 function setTheme(v) {
   theme = v; localStorage.setItem(THEME_KEY, v);
@@ -536,6 +549,10 @@ function setLang(v) {
   if (manualModalSave) manualModalSave.textContent = t[lang].modalSave;
   if (manualModalDelete) manualModalDelete.textContent = t[lang].manualModalDelete;
   if (btnAddManual) btnAddManual.textContent = t[lang].btnAddManual;
+  document.querySelectorAll('.position-filter .filter-btn').forEach(btn => {
+    const k = btn.dataset.filter === 'all' ? 'filterAll' : btn.dataset.filter === 'open' ? 'filterOpen' : 'filterClosed';
+    if (t[lang][k]) btn.textContent = t[lang][k];
+  });
   const editBtns = document.querySelectorAll('.edit-row-btn');
   editBtns.forEach(b => b.textContent = t[lang].editBtn);
   if (lastAssetPositions && lastAssetPositions.length > 0) renderAssetChart(lastAssetPositions);
@@ -1016,6 +1033,125 @@ function bindManualPositionModal(base, wallet) {
   });
 }
 
+function applyStatusFilter(positions, filter) {
+  if (filter === 'all') return positions;
+  if (filter === 'open') return positions.filter(p => (p.status || 'open').toLowerCase() !== 'close');
+  if (filter === 'closed') return positions.filter(p => (p.status || 'open').toLowerCase() === 'close');
+  return positions;
+}
+
+function renderPositionsTable(filter, data) {
+  lastPositionFilter = filter;
+  const { filteredPositions, hiddenTotalUsd, walletTokensUsd, addrLower, base } = data;
+  const displayPositions = applyStatusFilter(filteredPositions, filter);
+  const showOtherRow = hiddenTotalUsd >= 0.01 && (filter === 'all' || filter === 'open');
+  const showWalletRow = walletTokensUsd >= 0.01 && (filter === 'all' || filter === 'open');
+
+  const positionsTableBody = document.getElementById('positionsTableBody');
+  const positionFilter = document.getElementById('positionFilter');
+  positionsTableBody.innerHTML = '';
+
+  document.querySelectorAll('.position-filter .filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+    const k = btn.dataset.filter === 'all' ? 'filterAll' : btn.dataset.filter === 'open' ? 'filterOpen' : 'filterClosed';
+    btn.textContent = t[lang][k] || btn.textContent;
+  });
+
+  displayPositions.forEach((pos) => {
+    const tr = document.createElement('tr');
+    tr.dataset.pos = JSON.stringify(pos);
+    tr.dataset.wallet = addrLower;
+    if (pos.isFullyManual) tr.classList.add('manual-position');
+    const dateOpenDisplay = pos.manualOpenedAt ? fmtDateDDMMYYYY(pos.manualOpenedAt) : '—';
+    const daysOpenDisplay = pos.daysOpen != null ? String(pos.daysOpen) : '—';
+    const initialDisplay = pos.manualInitialUsd != null ? fmtUsd(pos.manualInitialUsd) : '—';
+    const updatedDisplay = pos.lastUpdateDate ? fmtDateDDMMYYYY(pos.lastUpdateDate) : '—';
+    const withdrawnDisplay = pos.withdrawnUsd != null && pos.withdrawnUsd !== 0 ? fmtUsd(pos.withdrawnUsd) : '—';
+    const profitUsd = pos.profitUsd;
+    let profitDisplay = '—';
+    let profitClass = 'profit-zero';
+    if (profitUsd != null && pos.manualInitialUsd != null) {
+      profitDisplay = fmtUsd(profitUsd);
+      profitClass = profitUsd > 0 ? 'profit-positive' : (profitUsd < 0 ? 'profit-negative' : 'profit-zero');
+    }
+    const roiDisplay = pos.roiPercent != null && pos.manualInitialUsd != null ? fmtRoi(pos.roiPercent) : '—';
+    const apyDisplay = pos.apyPercent != null && pos.manualOpenedAt && pos.manualInitialUsd != null ? fmtApy(pos.apyPercent) : '—';
+    const roiClass = pos.roiPercent != null && pos.manualInitialUsd != null ? (pos.roiPercent > 0 ? 'profit-positive' : (pos.roiPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
+    const apyClass = pos.apyPercent != null ? (pos.apyPercent > 0 ? 'profit-positive' : (pos.apyPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
+    const curYld = calcCurrentYield(pos);
+    const curYldDisplay = fmtCurYld(curYld);
+    const curYldClass = curYld != null && curYld > 0 ? 'profit-positive' : '';
+    const statusVal = (pos.status || 'open').toLowerCase();
+    const statusClass = (statusVal === 'close' || statusVal === 'closed') ? 'close' : 'open';
+    const statusText = statusClass === 'close' ? 'close' : 'open';
+    const editBtnText = t[lang].editBtn;
+    const lbl = (ru, en) => lang === 'ru' ? ru : en;
+    const protocolUrl = pos.protocol_site_url || '';
+    const protocolLink = protocolUrl ? `<a href="${protocolUrl}" target="_blank" rel="noopener" class="protocol-link" title="${pos.protocol_name}">↗</a>` : '';
+    const manualMarker = pos.isFullyManual ? `<span class="manual-marker">M</span>` : '';
+    tr.innerHTML = `
+      <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span>${manualMarker}${protocolLink}</div></td>
+      <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">${dateOpenDisplay}</td>
+      <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">${initialDisplay}</td>
+      <td class="text-right col-num" data-label="${lbl('Дней','Days')}">${daysOpenDisplay}</td>
+      <td class="text-right col-num usd-value" data-label="${lbl('Стоимость $','Value $')}">${pos.total_usd != null ? fmtUsd(pos.total_usd) : '—'}</td>
+      <td class="text-left col-date" data-label="${lbl('Обновл.','Updated')}">${updatedDisplay}</td>
+      <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">${withdrawnDisplay}</td>
+      <td class="text-right col-num ${profitClass}" data-label="${lbl('Прибыль','Profit')}">${profitDisplay}</td>
+      <td class="text-right col-num ${roiClass}" data-label="ROI">${roiDisplay}</td>
+      <td class="text-right col-num ${apyClass}" data-label="APY">${apyDisplay}</td>
+      <td class="text-right col-num ${curYldClass}" data-label="${lbl('Тек.дох.','CurYld')}">${curYldDisplay}</td>
+      <td class="text-left col-status" data-label="${lbl('Состояние','Status')}"><span class="status-badge ${statusClass}">${statusText}</span></td>
+      <td class="col-edit"><button class="edit-row-btn" type="button" title="${lbl('Редактировать','Edit')}">${editBtnText}</button></td>
+    `;
+    positionsTableBody.appendChild(tr);
+  });
+
+  if (showOtherRow) {
+    const otherTr = document.createElement('tr');
+    otherTr.className = 'wallet-tokens-row';
+    const lbl = (ru, en) => lang === 'ru' ? ru : en;
+    otherTr.innerHTML = `
+      <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell"><span class="symbol" style="color:var(--muted2)">${t[lang].otherPositionsRow}</span></div></td>
+      <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">—</td>
+      <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">—</td>
+      <td class="text-right col-num" data-label="${lbl('Дней','Days')}">—</td>
+      <td class="text-right col-num usd-value" data-label="${lbl('Стоимость $','Value $')}">${fmtUsd(hiddenTotalUsd)}</td>
+      <td class="text-left col-date" data-label="${lbl('Обновл.','Updated')}">—</td>
+      <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">—</td>
+      <td class="text-right col-num" data-label="${lbl('Прибыль','Profit')}">—</td>
+      <td class="text-right col-num" data-label="ROI">—</td>
+      <td class="text-right col-num" data-label="APY">—</td>
+      <td class="text-right col-num" data-label="${lbl('Тек.дох.','CurYld')}">—</td>
+      <td class="text-left col-status" data-label="${lbl('Состояние','Status')}">—</td>
+      <td class="col-edit"></td>
+    `;
+    positionsTableBody.appendChild(otherTr);
+  }
+
+  if (showWalletRow) {
+    const walletTr = document.createElement('tr');
+    walletTr.className = 'wallet-tokens-row';
+    const lbl = (ru, en) => lang === 'ru' ? ru : en;
+    walletTr.innerHTML = `
+      <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell"><span class="symbol" style="color:var(--muted2)">${t[lang].walletTokensRow}</span></div></td>
+      <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">—</td>
+      <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">—</td>
+      <td class="text-right col-num" data-label="${lbl('Дней','Days')}">—</td>
+      <td class="text-right col-num usd-value" data-label="${lbl('Стоимость $','Value $')}">${fmtUsd(walletTokensUsd)}</td>
+      <td class="text-left col-date" data-label="${lbl('Обновл.','Updated')}">—</td>
+      <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">—</td>
+      <td class="text-right col-num" data-label="${lbl('Прибыль','Profit')}">—</td>
+      <td class="text-right col-num" data-label="ROI">—</td>
+      <td class="text-right col-num" data-label="APY">—</td>
+      <td class="text-right col-num" data-label="${lbl('Тек.дох.','CurYld')}">—</td>
+      <td class="text-left col-status" data-label="${lbl('Состояние','Status')}">—</td>
+      <td class="col-edit"></td>
+    `;
+    positionsTableBody.appendChild(walletTr);
+  }
+}
+
 async function loadAssets() {
   const addr = document.getElementById('addr').value.trim();
   const loadingEl = document.getElementById('loading');
@@ -1135,102 +1271,28 @@ async function loadAssets() {
     const walletTokensUsd = tokenList.reduce((sum, tok) => sum + ((tok.price || 0) * (tok.amount || 0)), 0);
 
     const positionsTableWrap = document.getElementById('positionsTableWrap');
-    const positionsTableBody = document.getElementById('positionsTableBody');
-    positionsTableBody.innerHTML = '';
+    const positionFilter = document.getElementById('positionFilter');
     if (filteredPositions.length > 0 || walletTokensUsd >= 0.01 || hiddenTotalUsd >= 0.01) {
       positionsTableWrap.style.display = 'block';
-      filteredPositions.forEach((pos) => {
-        const tr = document.createElement('tr');
-        tr.dataset.pos = JSON.stringify(pos);
-        tr.dataset.wallet = addrLower;
-        if (pos.isFullyManual) tr.classList.add('manual-position');
-        const dateOpenDisplay = pos.manualOpenedAt ? fmtDateDDMMYYYY(pos.manualOpenedAt) : '—';
-        const daysOpenDisplay = pos.daysOpen != null ? String(pos.daysOpen) : '—';
-        const initialDisplay = pos.manualInitialUsd != null ? fmtUsd(pos.manualInitialUsd) : '—';
-        const updatedDisplay = pos.lastUpdateDate ? fmtDateDDMMYYYY(pos.lastUpdateDate) : '—';
-        const withdrawnDisplay = pos.withdrawnUsd != null && pos.withdrawnUsd !== 0 ? fmtUsd(pos.withdrawnUsd) : '—';
-        const profitUsd = pos.profitUsd;
-        let profitDisplay = '—';
-        let profitClass = 'profit-zero';
-        if (profitUsd != null && pos.manualInitialUsd != null) {
-          profitDisplay = fmtUsd(profitUsd);
-          profitClass = profitUsd > 0 ? 'profit-positive' : (profitUsd < 0 ? 'profit-negative' : 'profit-zero');
-        }
-        const roiDisplay = pos.roiPercent != null && pos.manualInitialUsd != null ? fmtRoi(pos.roiPercent) : '—';
-        const apyDisplay = pos.apyPercent != null && pos.manualOpenedAt && pos.manualInitialUsd != null ? fmtApy(pos.apyPercent) : '—';
-        const roiClass = pos.roiPercent != null && pos.manualInitialUsd != null ? (pos.roiPercent > 0 ? 'profit-positive' : (pos.roiPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
-        const apyClass = pos.apyPercent != null ? (pos.apyPercent > 0 ? 'profit-positive' : (pos.apyPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
-        const curYld = calcCurrentYield(pos);
-        const curYldDisplay = fmtCurYld(curYld);
-        const curYldClass = curYld != null && curYld > 0 ? 'profit-positive' : '';
-        const statusVal = (pos.status || 'open').toLowerCase();
-        const statusClass = (statusVal === 'close' || statusVal === 'closed') ? 'close' : 'open';
-        const statusText = statusClass === 'close' ? 'close' : 'open';
-        const editBtnText = t[lang].editBtn;
-        const lbl = (ru, en) => lang === 'ru' ? ru : en;
-        const protocolUrl = pos.protocol_site_url || '';
-        const protocolLink = protocolUrl ? `<a href="${protocolUrl}" target="_blank" rel="noopener" class="protocol-link" title="${pos.protocol_name}">↗</a>` : '';
-        const manualMarker = pos.isFullyManual ? `<span class="manual-marker">M</span>` : '';
-        tr.innerHTML = `
-          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span>${manualMarker}${protocolLink}</div></td>
-          <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">${dateOpenDisplay}</td>
-          <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">${initialDisplay}</td>
-          <td class="text-right col-num" data-label="${lbl('Дней','Days')}">${daysOpenDisplay}</td>
-          <td class="text-right col-num usd-value" data-label="${lbl('Стоимость $','Value $')}">${pos.total_usd != null ? fmtUsd(pos.total_usd) : '—'}</td>
-          <td class="text-left col-date" data-label="${lbl('Обновл.','Updated')}">${updatedDisplay}</td>
-          <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">${withdrawnDisplay}</td>
-          <td class="text-right col-num ${profitClass}" data-label="${lbl('Прибыль','Profit')}">${profitDisplay}</td>
-          <td class="text-right col-num ${roiClass}" data-label="ROI">${roiDisplay}</td>
-          <td class="text-right col-num ${apyClass}" data-label="APY">${apyDisplay}</td>
-          <td class="text-right col-num ${curYldClass}" data-label="${lbl('Тек.дох.','CurYld')}">${curYldDisplay}</td>
-          <td class="text-left col-status" data-label="${lbl('Состояние','Status')}"><span class="status-badge ${statusClass}">${statusText}</span></td>
-          <td class="col-edit"><button class="edit-row-btn" type="button" title="${lbl('Редактировать','Edit')}">${editBtnText}</button></td>
-        `;
-        positionsTableBody.appendChild(tr);
-      });
+      positionFilter.style.display = 'flex';
+      lastPositionsData = {
+        filteredPositions,
+        hiddenTotalUsd,
+        walletTokensUsd,
+        addrLower,
+        base
+      };
+      renderPositionsTable(lastPositionFilter, lastPositionsData);
 
-      if (hiddenTotalUsd >= 0.01) {
-        const otherTr = document.createElement('tr');
-        otherTr.className = 'wallet-tokens-row';
-        const lbl = (ru, en) => lang === 'ru' ? ru : en;
-        otherTr.innerHTML = `
-          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell"><span class="symbol" style="color:var(--muted2)">${t[lang].otherPositionsRow}</span></div></td>
-          <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">—</td>
-          <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">—</td>
-          <td class="text-right col-num" data-label="${lbl('Дней','Days')}">—</td>
-          <td class="text-right col-num usd-value" data-label="${lbl('Стоимость $','Value $')}">${fmtUsd(hiddenTotalUsd)}</td>
-          <td class="text-left col-date" data-label="${lbl('Обновл.','Updated')}">—</td>
-          <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">—</td>
-          <td class="text-right col-num" data-label="${lbl('Прибыль','Profit')}">—</td>
-          <td class="text-right col-num" data-label="ROI">—</td>
-          <td class="text-right col-num" data-label="APY">—</td>
-          <td class="text-right col-num" data-label="${lbl('Тек.дох.','CurYld')}">—</td>
-          <td class="text-left col-status" data-label="${lbl('Состояние','Status')}">—</td>
-          <td class="col-edit"></td>
-        `;
-        positionsTableBody.appendChild(otherTr);
-      }
-
-      if (walletTokensUsd >= 0.01) {
-        const walletTr = document.createElement('tr');
-        walletTr.className = 'wallet-tokens-row';
-        const lbl = (ru, en) => lang === 'ru' ? ru : en;
-        walletTr.innerHTML = `
-          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell"><span class="symbol" style="color:var(--muted2)">${t[lang].walletTokensRow}</span></div></td>
-          <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">—</td>
-          <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">—</td>
-          <td class="text-right col-num" data-label="${lbl('Дней','Days')}">—</td>
-          <td class="text-right col-num usd-value" data-label="${lbl('Стоимость $','Value $')}">${fmtUsd(walletTokensUsd)}</td>
-          <td class="text-left col-date" data-label="${lbl('Обновл.','Updated')}">—</td>
-          <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">—</td>
-          <td class="text-right col-num" data-label="${lbl('Прибыль','Profit')}">—</td>
-          <td class="text-right col-num" data-label="ROI">—</td>
-          <td class="text-right col-num" data-label="APY">—</td>
-          <td class="text-right col-num" data-label="${lbl('Тек.дох.','CurYld')}">—</td>
-          <td class="text-left col-status" data-label="${lbl('Состояние','Status')}">—</td>
-          <td class="col-edit"></td>
-        `;
-        positionsTableBody.appendChild(walletTr);
+      if (!positionFilter.dataset.bound) {
+        positionFilter.dataset.bound = '1';
+        positionFilter.querySelectorAll('.filter-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const f = btn.dataset.filter;
+            if (!lastPositionsData) return;
+            renderPositionsTable(f, lastPositionsData);
+          });
+        });
       }
 
       let portfolioYieldSum = 0;
@@ -1265,10 +1327,11 @@ async function loadAssets() {
       bindManualPositionModal(base, addrLower);
     } else {
       positionsTableWrap.style.display = 'block';
+      document.getElementById('positionFilter').style.display = 'none';
       document.getElementById('portfolioStatsRow').style.display = 'none';
       document.getElementById('btnAddManual').style.display = 'inline-flex';
       bindManualPositionModal(base, addrLower);
-      positionsTableBody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
+      document.getElementById('positionsTableBody').innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
   } catch (err) {
     loadingEl.style.display = 'none';
