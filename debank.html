@@ -972,10 +972,9 @@ function bindManualPositionModal(base, wallet) {
     statusMsg.className = 'modal-status';
 
     try {
-      const protocolId = protocolName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-      const positionKey = editingPosition
-        ? editingPosition.position_key
-        : 'manual_' + Date.now();
+      const chain = editingPosition ? editingPosition.chain : chainInput.value.trim().toLowerCase().replace(/\s+/g, '_');
+      const protocolId = editingPosition ? editingPosition.protocol_id : protocolName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const positionKey = editingPosition ? editingPosition.position_key : 'manual_' + Date.now();
 
       const payload = {
         wallet: wallet,
