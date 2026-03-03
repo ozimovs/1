@@ -174,6 +174,12 @@
   .section-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 18px; color: var(--text); }
   .protocol-cell { display: flex; align-items: center; gap: 10px; }
   .protocol-cell img { width: 24px; height: 24px; border-radius: 6px; }
+  .protocol-placeholder {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; min-width: 24px;
+    border-radius: 6px; font-size: 11px; font-weight: 700;
+    background: var(--surface2); color: var(--muted2); border: 1px solid var(--border);
+  }
   .editable-cell { cursor: pointer; min-width: 90px; }
   .editable-cell:hover { background: rgba(0,229,160,0.06); border-radius: 4px; }
   .editable-cell input { width: 100%; max-width: 110px; padding: 4px 8px; font: inherit; background: var(--surface2); border: 1px solid var(--accent); border-radius: 4px; color: var(--text); }
@@ -318,8 +324,8 @@
       <div class="skeleton" style="height:200px;"></div>
     </div>
     <div class="position-filter" id="positionFilter" style="display:none;">
-      <button class="filter-btn active" data-filter="all" id="filterAll">Все</button>
-      <button class="filter-btn" data-filter="open" id="filterOpen">Открытые</button>
+      <button class="filter-btn" data-filter="all" id="filterAll">Все</button>
+      <button class="filter-btn active" data-filter="open" id="filterOpen">Открытые</button>
       <button class="filter-btn" data-filter="closed" id="filterClosed">Закрытые</button>
     </div>
     <div class="defi-table-wrap" id="positionsTableWrap" style="display:none;">
@@ -535,7 +541,7 @@ const t = {
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
 let theme = localStorage.getItem(THEME_KEY) || 'dark';
 let lastAssetPositions = null;
-let lastPositionFilter = 'all';
+let lastPositionFilter = 'open';
 let lastPositionsData = null;
 
 function setTheme(v) {
@@ -1139,7 +1145,7 @@ function renderPositionsTable(filter, data) {
         const manualMarker = pos.isFullyManual ? `<span class="manual-marker">M</span>` : '';
         const debankGoneHint = pos.debankGone ? `<span class="debank-gone-hint" title="${t[lang].debankGoneHint || 'DeBank больше не показывает эту позицию — укажите статус close вручную'}">!</span>` : '';
         tr.innerHTML = `
-          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : ''}<span class="symbol">${pos.protocol_name}</span>${manualMarker}${debankGoneHint}${protocolLink}</div></td>
+          <td class="text-left col-protocol" data-label="${lbl('Протокол','Protocol')}"><div class="protocol-cell" title="${(pos.protocol_name || '').replace(/"/g, '&quot;')}">${pos.protocol_logo_url ? `<img src="${pos.protocol_logo_url}" alt="">` : `<span class="protocol-placeholder" title="${(pos.protocol_name || '?').replace(/"/g, '&quot;')}">${(pos.protocol_name || '?').charAt(0).toUpperCase()}</span>`}<span class="symbol">${pos.protocol_name}</span>${manualMarker}${debankGoneHint}${protocolLink}</div></td>
       <td class="text-left col-date" data-label="${lbl('Откр.','Open')}">${dateOpenDisplay}</td>
       <td class="text-right col-num" data-label="${lbl('Внесено $','Deposit $')}">${initialDisplay}</td>
       <td class="text-right col-num" data-label="${lbl('Дней','Days')}">${daysOpenDisplay}</td>
