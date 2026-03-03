@@ -102,6 +102,7 @@
   .defi-table-wrap { overflow: visible; max-width: 100%; }
   .defi-table-wrap table { width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.35; table-layout: fixed; }
   .defi-table-wrap thead tr { background: transparent; border-bottom: 1px solid var(--border); }
+  [data-theme="light"] .defi-table-wrap thead tr { background: #f9fafb; }
   .defi-table-wrap thead th {
     padding: 10px 8px; font-family: 'Space Mono', monospace;
     font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted2); font-weight: 600;
@@ -230,6 +231,8 @@
   .asset-distribution-wrap { margin-top: 24px; }
   .asset-distribution-title { font-size: 12px; color: var(--muted2); margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
   .asset-table { width: 100%; max-width: 400px; border-collapse: collapse; font-size: 12px; }
+  .asset-table thead tr { background: transparent; }
+  [data-theme="light"] .asset-table thead tr { background: #f9fafb; }
   .asset-table thead th {
     padding: 8px 12px; font-family: 'Space Mono', monospace; font-size: 10px;
     text-transform: uppercase; color: var(--muted2); font-weight: 600; border-bottom: 1px solid var(--border);
@@ -286,8 +289,10 @@
   .position-filter { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
   .position-filter .filter-btn {
     padding: 8px 16px; font-size: 12px; border-radius: var(--radius-pill);
-    background: var(--surface); border: 1px solid var(--border); color: var(--muted2);
-    cursor: pointer; transition: all 0.2s; font-family: var(--font-sans);
+    color: var(--muted2); cursor: pointer; transition: all 0.2s; font-family: var(--font-sans);
+  }
+  .position-filter .filter-btn:not(.active) {
+    background: var(--surface); border: 1px solid var(--border);
   }
   .position-filter .filter-btn:hover { color: var(--text); border-color: var(--muted2); }
   .position-filter .filter-btn.active { background: #374151; color: #fff; border-color: #374151; }
@@ -359,8 +364,7 @@
             <th class="text-right col-num" id="thPosWithdrawn">Выведено</th>
             <th class="text-right col-num" id="thPosProfit">Прибыль</th>
             <th class="text-right col-num" id="thPosRoi">ROI</th>
-            <th class="text-right col-num" id="thPosApy">APY</th>
-            <th class="text-right col-num" id="thPosCurYld">Тек.дох.</th>
+            <th class="text-right col-num" id="thPosApr">APR</th>
             <th class="text-left col-status" id="thPosStatus">Сост.</th>
             <th class="col-edit"></th>
           </tr>
@@ -511,7 +515,7 @@ const t = {
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
-    thPosProtocol: 'Протокол', thPosDateOpen: 'Откр.', thPosInitial: 'Внесено $', thPosDays: 'Дней', thPosUsd: 'Стоимость $', thPosUpdated: 'Обновл.', thPosWithdrawn: 'Выведено $', thPosProfit: 'Прибыль $', thPosRoi: 'ROI', thPosApy: 'APY', thPosCurYld: 'Тек.дох.', thPosStatus: 'Сост.', lblPortfolioYield: 'Текущая доходность', lblOpenProtocols: 'Открытых протоколов',
+    thPosProtocol: 'Протокол', thPosDateOpen: 'Откр.', thPosInitial: 'Внесено $', thPosDays: 'Дней', thPosUsd: 'Стоимость $', thPosUpdated: 'Обновл.', thPosWithdrawn: 'Выведено $', thPosProfit: 'Прибыль $', thPosRoi: 'ROI', thPosApr: 'APR', thPosStatus: 'Сост.', lblPortfolioYield: 'APR портфеля', lblOpenProtocols: 'Открытых протоколов',
     assetDistributionTitle: 'Диверсификация по активам', thAssetName: 'Актив', thAssetUsd: 'Сумма', thAssetPct: 'Доля', lblOthers: 'Другие', lblTotalValue: 'Сумма', lblDeFiPortfolio: 'DeFi портфель',
     loading: 'Загрузка...', empty: 'Введите адрес и нажмите «Загрузить»', back: '← Трекер',
     invalidAddr: 'Введите валидный адрес (0x + 40 символов)',
@@ -536,14 +540,13 @@ const t = {
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
-    thPosProtocol: 'Protocol', thPosDateOpen: 'Open', thPosInitial: 'Deposit $', thPosDays: 'Days', thPosUsd: 'Value $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn $', thPosProfit: 'Profit $', thPosRoi: 'ROI', thPosApy: 'APY', thPosCurYld: 'CurYld', lblPortfolioYield: 'Current yield', lblOpenProtocols: 'Open protocols',
+    thPosProtocol: 'Protocol', thPosDateOpen: 'Open', thPosInitial: 'Deposit $', thPosDays: 'Days', thPosUsd: 'Value $', thPosUpdated: 'Updated', thPosWithdrawn: 'Withdrawn $', thPosProfit: 'Profit $', thPosRoi: 'ROI', thPosApr: 'APR', thPosStatus: 'St.', lblPortfolioYield: 'Portfolio APR', lblOpenProtocols: 'Open protocols',
     assetDistributionTitle: 'Asset diversification', thAssetName: 'Asset', thAssetUsd: 'Amount', thAssetPct: 'Share', lblOthers: 'Others', lblTotalValue: 'Total', lblDeFiPortfolio: 'DeFi portfolio',
     loading: 'Loading...', empty: 'Enter address and click Load', back: '← Tracker',
     invalidAddr: 'Enter valid address (0x + 40 chars)',
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions', walletTokensRow: 'Wallet tokens', otherPositionsRow: 'Other positions',
     apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.',
     apiHint: 'If load fails: open debank.html?api=https://your-vercel.vercel.app',
-    thPosStatus: 'St.',
     modalTitle: 'Edit position', modalLblDate: 'Date opened (DD.MM.YYYY)', modalLblInitial: 'Initial amount, USD',
     modalLblWithdrawn: 'Withdrawn, USD', modalLblStatus: 'Status',
     modalCancel: 'Cancel', modalSave: 'Save', modalSaving: 'Saving...', modalSaved: 'Saved',
@@ -593,7 +596,7 @@ function setLang(v) {
   const sectionTokens = document.getElementById('sectionTokens');
   if (sectionDefi) sectionDefi.textContent = t[lang].sectionDefi;
   if (sectionTokens) sectionTokens.textContent = t[lang].sectionTokens;
-  ['thPosProtocol','thPosDateOpen','thPosInitial','thPosDays','thPosUsd','thPosUpdated','thPosWithdrawn','thPosProfit','thPosRoi','thPosApy','thPosCurYld','thPosStatus','assetDistributionTitle','thAssetName','thAssetUsd','thAssetPct'].forEach(id => {
+  ['thPosProtocol','thPosDateOpen','thPosInitial','thPosDays','thPosUsd','thPosUpdated','thPosWithdrawn','thPosProfit','thPosRoi','thPosApr','thPosStatus','assetDistributionTitle','thAssetName','thAssetUsd','thAssetPct'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = t[lang][id];
   });
@@ -649,11 +652,6 @@ function fmtRoi(v) {
   const sep = lang === 'ru' ? ',' : '.';
   return Number(v).toFixed(1).replace('.', sep) + '%';
 }
-function fmtApy(v) {
-  if (v == null || isNaN(v)) return '—';
-  return Math.round(v) + '%';
-}
-
 function calcCurrentYield(pos) {
   const statusVal = (pos.status || 'open').toLowerCase();
   const isClosed = statusVal === 'close' || statusVal === 'closed';
@@ -816,11 +814,12 @@ function bindPositionEdits(fmtUsd) {
     tr.cells[7].textContent = profitUsd != null && merged.manualInitialUsd != null ? fmtUsd(profitUsd) : '—';
     tr.cells[7].className = 'text-right ' + profitClass;
     const roiClass = merged.roiPercent != null && merged.manualInitialUsd != null ? (merged.roiPercent > 0 ? 'profit-positive' : (merged.roiPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
-    const apyClass = merged.apyPercent != null ? (merged.apyPercent > 0 ? 'profit-positive' : (merged.apyPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
+    const aprVal = calcCurrentYield(merged);
+    const aprClass = aprVal != null && aprVal > 0 ? 'profit-positive' : '';
     tr.cells[8].textContent = merged.roiPercent != null && merged.manualInitialUsd != null ? fmtRoi(merged.roiPercent) : '—';
     tr.cells[8].className = 'text-right ' + roiClass;
-    tr.cells[9].textContent = merged.apyPercent != null && merged.manualOpenedAt && merged.manualInitialUsd != null ? fmtApy(merged.apyPercent) : '—';
-    tr.cells[9].className = 'text-right ' + apyClass;
+    tr.cells[9].textContent = aprVal != null ? fmtCurYld(aprVal) : '—';
+    tr.cells[9].className = 'text-right ' + aprClass;
     tr.cells[10].innerHTML = statusBadge(merged.status);
   }
 
@@ -917,13 +916,9 @@ function bindPositionEdits(fmtUsd) {
         const totalWithValue = isClosed ? withdrawn : (pos.total_usd || 0) + withdrawn;
         merged.profitUsd = totalWithValue - init;
         merged.roiPercent = (totalWithValue / init - 1) * 100;
-        merged.apyPercent = merged.daysOpen != null && merged.daysOpen >= 1
-          ? ((1 + (totalWithValue / init - 1)) ** (365 / merged.daysOpen) - 1) * 100
-          : null;
       } else {
         merged.profitUsd = null;
         merged.roiPercent = null;
-        merged.apyPercent = null;
       }
       updateRowFromMerged(currentTr, merged);
       modalStatusMsg.textContent = t[lang].modalSaved;
@@ -1152,12 +1147,10 @@ function renderPositionsTable(filter, data) {
       profitClass = profitUsd > 0 ? 'profit-positive' : (profitUsd < 0 ? 'profit-negative' : 'profit-zero');
     }
     const roiDisplay = pos.roiPercent != null && pos.manualInitialUsd != null ? fmtRoi(pos.roiPercent) : '—';
-    const apyDisplay = pos.apyPercent != null && pos.manualOpenedAt && pos.manualInitialUsd != null ? fmtApy(pos.apyPercent) : '—';
     const roiClass = pos.roiPercent != null && pos.manualInitialUsd != null ? (pos.roiPercent > 0 ? 'profit-positive' : (pos.roiPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
-    const apyClass = pos.apyPercent != null ? (pos.apyPercent > 0 ? 'profit-positive' : (pos.apyPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
-    const curYld = calcCurrentYield(pos);
-    const curYldDisplay = fmtCurYld(curYld);
-    const curYldClass = curYld != null && curYld > 0 ? 'profit-positive' : '';
+    const aprVal = calcCurrentYield(pos);
+    const aprDisplay = fmtCurYld(aprVal);
+    const aprClass = aprVal != null && aprVal > 0 ? 'profit-positive' : '';
     const statusVal = (pos.status || 'open').toLowerCase();
     const statusClass = (statusVal === 'close' || statusVal === 'closed') ? 'close' : 'open';
     const statusText = statusClass === 'close' ? 'close' : 'open';
@@ -1177,8 +1170,7 @@ function renderPositionsTable(filter, data) {
       <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">${withdrawnDisplay}</td>
       <td class="text-right col-num ${profitClass}" data-label="${lbl('Прибыль','Profit')}">${profitDisplay}</td>
       <td class="text-right col-num ${roiClass}" data-label="ROI">${roiDisplay}</td>
-      <td class="text-right col-num ${apyClass}" data-label="APY">${apyDisplay}</td>
-      <td class="text-right col-num ${curYldClass}" data-label="${lbl('Тек.дох.','CurYld')}">${curYldDisplay}</td>
+      <td class="text-right col-num ${aprClass}" data-label="APR">${aprDisplay}</td>
       <td class="text-left col-status" data-label="${lbl('Состояние','Status')}"><span class="status-badge ${statusClass}">${statusText}</span></td>
       <td class="col-edit"><button class="edit-row-btn" type="button" title="${lbl('Редактировать','Edit')}">${editBtnText}</button></td>
     `;
@@ -1199,8 +1191,7 @@ function renderPositionsTable(filter, data) {
       <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">—</td>
       <td class="text-right col-num" data-label="${lbl('Прибыль','Profit')}">—</td>
       <td class="text-right col-num" data-label="ROI">—</td>
-      <td class="text-right col-num" data-label="APY">—</td>
-      <td class="text-right col-num" data-label="${lbl('Тек.дох.','CurYld')}">—</td>
+      <td class="text-right col-num" data-label="APR">—</td>
       <td class="text-left col-status" data-label="${lbl('Состояние','Status')}">—</td>
       <td class="col-edit"></td>
     `;
@@ -1221,8 +1212,7 @@ function renderPositionsTable(filter, data) {
       <td class="text-right col-num" data-label="${lbl('Выведено','Withdrawn')}">—</td>
       <td class="text-right col-num" data-label="${lbl('Прибыль','Profit')}">—</td>
       <td class="text-right col-num" data-label="ROI">—</td>
-      <td class="text-right col-num" data-label="APY">—</td>
-      <td class="text-right col-num" data-label="${lbl('Тек.дох.','CurYld')}">—</td>
+      <td class="text-right col-num" data-label="APR">—</td>
       <td class="text-left col-status" data-label="${lbl('Состояние','Status')}">—</td>
       <td class="col-edit"></td>
     `;
@@ -1411,7 +1401,7 @@ async function loadAssets() {
       document.getElementById('portfolioStatsRow').style.display = 'none';
       document.getElementById('btnAddManual').style.display = 'inline-flex';
       bindManualPositionModal(base, addrLower);
-      document.getElementById('positionsTableBody').innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
+      document.getElementById('positionsTableBody').innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
     }
   } catch (err) {
     loadingEl.style.display = 'none';

@@ -56,10 +56,11 @@
   "manualOpenedAt": "2026-01-09",
   "manualInitialUsd": 67265.0,
   "daysOpen": 45,
-  "profitUsd": 1234.56,
-  "apyPercent": 12.34
+  "profitUsd": 1234.56
 }
 ```
+
+*APR рассчитывается на фронтенде через calcCurrentYield (простая годовая доходность).*
 
 ---
 

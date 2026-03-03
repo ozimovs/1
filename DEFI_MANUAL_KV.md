@@ -56,18 +56,19 @@
   "opened_at_effective": "2022-12-16T00:00:00.000Z",
   "days_open": 800,
   "initial_deposit_usd": 73674.36,
-  "profit_usd": -8674.36,
-  "apy_percent": -4.3
+  "profit_usd": -8674.36
 }
 ```
+
+*APR (годовая доходность) рассчитывается на фронтенде, в API не возвращается.*
 
 ## Изменённые/добавленные файлы
 
 | Файл | Действие |
 |------|----------|
 | `package.json` | Зависимость `redis` |
-| `api/defi-positions.js` | Добавлены position_key, KV-слияние, opened_at_effective, profit_usd, apy_percent |
+| `api/defi-positions.js` | Добавлены position_key, KV-слияние, opened_at_effective, profit_usd |
 | `api/defi-position-manual.js` | POST для сохранения ручных значений |
 | `lib/redis.js` | Redis-клиент (REDIS_URL) |
-| `debank.html` | Редактируемые колонки «Открыта», «Нач. сумма», колонки «Прибыль», «APY %» |
+| `debank.html` | Редактируемые колонки «Открыта», «Нач. сумма», колонки «Прибыль», «APR» |
 | `vercel.json` | Добавлена функция defi-position-manual |

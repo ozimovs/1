@@ -136,14 +136,9 @@ function buildMergedPosition(p, id, manual, nowSec, lastUpdateDate) {
     : totalUsd + (withdrawnUsd || 0);
   let profitUsd = null;
   let roiPercent = null;
-  let apyPercent = null;
   if (manualInitialUsd != null && manualInitialUsd > 0) {
     profitUsd = totalWithValue - manualInitialUsd;
     roiPercent = (totalWithValue / manualInitialUsd - 1) * 100;
-    if (daysOpen != null && daysOpen >= 1) {
-      const roi = totalWithValue / manualInitialUsd - 1;
-      apyPercent = ((1 + roi) ** (365 / daysOpen) - 1) * 100;
-    }
   }
   return {
     ...p,
@@ -156,7 +151,6 @@ function buildMergedPosition(p, id, manual, nowSec, lastUpdateDate) {
     daysOpen,
     profitUsd,
     roiPercent,
-    apyPercent,
     lastUpdateDate,
     fromManualOnly: false,
   };
@@ -219,7 +213,6 @@ async function getFullyManualPositions(wallet) {
       daysOpen: null,
       profitUsd: null,
       roiPercent: null,
-      apyPercent: null,
       lastUpdateDate: null,
       fromManualOnly: true,
       isFullyManual: isFullyManual,
@@ -310,12 +303,7 @@ module.exports = async function handler(req, res) {
         if (mp.manualOpenedAt) {
           const dateStr = String(mp.manualOpenedAt).slice(0, 10);
           const effectiveSec = Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000);
-          const days = Math.max(0, Math.floor((nowSec - effectiveSec) / SEC_PER_DAY));
-          mp.daysOpen = days;
-          if (days >= 1) {
-            const roi = totalWithValue / mp.manualInitialUsd - 1;
-            mp.apyPercent = ((1 + roi) ** (365 / days) - 1) * 100;
-          }
+          mp.daysOpen = Math.max(0, Math.floor((nowSec - effectiveSec) / SEC_PER_DAY));
         }
       }
       mp.lastUpdateDate = lastUpdateDate;
