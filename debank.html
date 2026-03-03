@@ -8,7 +8,8 @@
 <style>
   :root, [data-theme="dark"] {
     --bg: #0a0d12; --surface: #111520; --surface2: #181e2e; --border: #1e2a40;
-    --accent: #00e5a0; --accent-dark: #008c5a; --warn: #f59e0b; --danger: #ef4444;
+    --accent: #00e5a0; --accent-dark: #008c5a; --accent-glow: 0 0 20px rgba(0,229,160,0.15);
+    --warn: #f59e0b; --danger: #ef4444;
     --text: #e2e8f0; --muted: #4a5568; --muted2: #718096; --btn-primary-text: #0a0d12;
     --profit-pos: #34d399; --profit-neg: #f87171; --status-open: #34d399; --status-close: #94a3b8;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.15);
@@ -19,7 +20,8 @@
   }
   [data-theme="light"] {
     --bg: #f1f5f9; --surface: #ffffff; --surface2: #e2e8f0; --border: #cbd5e1;
-    --accent: #059669; --accent-dark: #047857; --warn: #d97706; --danger: #dc2626;
+    --accent: #059669; --accent-dark: #047857; --accent-glow: 0 0 20px rgba(5,150,105,0.2);
+    --warn: #d97706; --danger: #dc2626;
     --text: #1e293b; --muted: #64748b; --muted2: #94a3b8; --btn-primary-text: #ffffff;
     --profit-pos: #059669; --profit-neg: #dc2626; --status-open: #059669; --status-close: #64748b;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
@@ -55,9 +57,11 @@
     box-shadow: var(--shadow-sm);
   }
   .btn-primary { background: var(--accent); color: var(--btn-primary-text); }
-  .btn-primary:hover { background: #00ffb2; transform: translateY(-1px); }
+  .btn-primary:hover { background: #00ffb2; transform: translateY(-1px) scale(1.02); box-shadow: var(--accent-glow); }
   .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
   .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .search-value-prop { font-size: 13px; color: var(--muted2); margin-bottom: 12px; width: 100%; }
+  .api-hint { font-size: 10px; color: var(--muted2); opacity: 0.8; margin-top: 12px; margin-bottom: 0; }
   .search-box {
     display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
     margin-bottom: 24px; padding: 16px; background: var(--surface);
@@ -72,7 +76,8 @@
     background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
     padding: 12px 16px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px;
   }
-  .form-group input:focus { outline: none; border-color: var(--accent); }
+  .form-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,229,160,0.2); }
+  [data-theme="light"] .form-group input:focus { box-shadow: 0 0 0 2px rgba(5,150,105,0.25); }
   .summary-cards {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px; margin-bottom: 24px;
@@ -87,7 +92,9 @@
   .card {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card);
     padding: 16px; position: relative; overflow: hidden; box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
   }
+  .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
   @media (min-width: 768px) { .card { padding: 20px; } }
   .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), transparent); }
   .card .c-label { font-family: 'Space Mono', monospace; font-size: 10px; text-transform: uppercase; color: var(--muted2); margin-bottom: 8px; }
@@ -103,7 +110,7 @@
   .defi-table-wrap thead th.text-left, .defi-table-wrap td.text-left { text-align: left; }
   .defi-table-wrap thead th.text-right, .defi-table-wrap td.text-right { text-align: right; }
   .defi-table-wrap td { padding: 12px 10px; font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .defi-table-wrap tbody tr { border-bottom: 1px solid var(--border); }
+  .defi-table-wrap tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
   .defi-table-wrap tbody tr:nth-child(even) { background: rgba(0,0,0,0.02); }
   [data-theme="light"] .defi-table-wrap tbody tr:nth-child(even) { background: #f9fafb; }
   .defi-table-wrap tbody tr:hover { background: rgba(0, 229, 160, 0.03) !important; }
@@ -152,7 +159,7 @@
     padding: 14px 16px; text-align: left; font-family: 'Space Mono', monospace;
     font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted2);
   }
-  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
   tbody tr:hover { background: rgba(0, 229, 160, 0.04); }
   td { padding: 12px 16px; font-family: 'Space Mono', monospace; font-size: 12px; }
   .token-cell { display: flex; align-items: center; gap: 10px; }
@@ -183,10 +190,12 @@
   .editable-cell { cursor: pointer; min-width: 90px; }
   .editable-cell:hover { background: rgba(0,229,160,0.06); border-radius: 4px; }
   .editable-cell input { width: 100%; max-width: 110px; padding: 4px 8px; font: inherit; background: var(--surface2); border: 1px solid var(--accent); border-radius: 4px; color: var(--text); }
-  .edit-row-btn { padding: 4px 8px; font-size: 10px; cursor: pointer; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-weight: 600; }
-  .edit-row-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,160,0.06); }
+  .edit-row-btn { padding: 4px 8px; font-size: 10px; cursor: pointer; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-weight: 600; transition: all 0.15s; }
+  .edit-row-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,160,0.06); transform: scale(1.05); }
   .skeleton { background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: skeleton 1.2s ease-in-out infinite; border-radius: 6px; }
   @keyframes skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .defi-block .portfolio-stats-row, .defi-block .position-filter, .defi-block .defi-table-wrap, .defi-block .asset-distribution-wrap { opacity: 0; transition: opacity 0.3s; }
+  .defi-block.defi-loaded .portfolio-stats-row, .defi-block.defi-loaded .position-filter, .defi-block.defi-loaded .defi-table-wrap, .defi-block.defi-loaded .asset-distribution-wrap { opacity: 1; }
   .modal-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000;
     align-items: center; justify-content: center; padding: 12px;
@@ -196,12 +205,16 @@
   .modal-box {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 24px; max-width: 400px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    transition: transform 0.2s;
   }
+  .modal-overlay.open .modal-box { animation: modalPop 0.2s ease-out forwards; }
+  @keyframes modalPop { from { transform: scale(0.98); opacity: 0.98; } to { transform: scale(1); opacity: 1; } }
   .modal-box h3 { margin-bottom: 20px; font-size: 18px; color: var(--text); }
   .modal-box .form-group { margin-bottom: 16px; }
   .modal-box .form-group label { display: block; margin-bottom: 6px; font-size: 11px; color: var(--muted2); text-transform: uppercase; }
   .modal-box input, .modal-box select { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; box-sizing: border-box; }
-  .modal-box input:focus, .modal-box select:focus { outline: none; border-color: var(--accent); }
+  .modal-box input:focus, .modal-box select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,229,160,0.2); }
+  [data-theme="light"] .modal-box input:focus, [data-theme="light"] .modal-box select:focus { box-shadow: 0 0 0 2px rgba(5,150,105,0.25); }
   .status-badge { display: inline-block; padding: 1px 4px; border-radius: 10px; font-size: 9px; font-weight: 600; text-transform: lowercase; white-space: nowrap; }
   .status-badge.open { background: var(--status-open); color: #fff; }
   .status-badge.close { background: rgba(148,163,184,0.35); color: var(--text); }
@@ -222,6 +235,7 @@
     text-transform: uppercase; color: var(--muted2); font-weight: 600; border-bottom: 1px solid var(--border);
   }
   .asset-table tbody td { padding: 10px 12px; font-family: 'Space Mono', monospace; border-bottom: 1px solid var(--border); }
+  .asset-table tbody tr { transition: background 0.15s; }
   .asset-table tbody tr:nth-child(even) { background: rgba(0,0,0,0.02); }
   [data-theme="light"] .asset-table tbody tr:nth-child(even) { background: #f9fafb; }
   .asset-table tbody tr:hover { background: rgba(0, 229, 160, 0.03) !important; }
@@ -232,7 +246,9 @@
   .asset-table .pct-medium { color: var(--warn); }
   .asset-table .pct-normal { color: var(--accent); }
   .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
-  .modal-actions .btn { flex: 1; }
+  .modal-actions .btn { flex: 1; transition: all 0.2s; }
+  .modal-actions .btn-secondary:hover { border-color: var(--muted2); }
+  .modal-actions .btn-primary:hover { box-shadow: var(--accent-glow); }
   .modal-status { margin-top: 12px; font-size: 13px; min-height: 20px; }
   .modal-status.success { color: var(--accent); }
   .modal-status.error { color: var(--danger); }
@@ -245,15 +261,16 @@
   .protocol-link {
     display: inline-flex; align-items: center; justify-content: center;
     margin-left: 6px; width: 16px; height: 16px; font-size: 10px; line-height: 1;
-    color: var(--muted2); text-decoration: none; opacity: 0.6; transition: opacity 0.15s, color 0.15s;
+    color: var(--muted2); text-decoration: none; opacity: 0.6; transition: opacity 0.15s, color 0.15s, transform 0.15s;
   }
-  .protocol-link:hover { opacity: 1; color: var(--accent); }
+  .protocol-link:hover { opacity: 1; color: var(--accent); transform: scale(1.1); }
   .portfolio-stats-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
   .portfolio-stat-card {
     display: flex; align-items: center; gap: 12px; padding: 14px 18px;
     background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-card);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-sm); transition: transform 0.2s, box-shadow 0.2s;
   }
+  .portfolio-stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
   .portfolio-stat-label { font-family: 'Space Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--muted2); font-weight: 600; }
   .portfolio-stat-value { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 800; color: var(--accent); }
   .defi-header-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -270,9 +287,9 @@
   .position-filter .filter-btn {
     padding: 8px 16px; font-size: 12px; border-radius: var(--radius-pill);
     background: var(--surface); border: 1px solid var(--border); color: var(--muted2);
-    cursor: pointer; transition: all 0.15s; font-family: var(--font-sans);
+    cursor: pointer; transition: all 0.2s; font-family: var(--font-sans);
   }
-  .position-filter .filter-btn:hover { color: var(--text); }
+  .position-filter .filter-btn:hover { color: var(--text); border-color: var(--muted2); }
   .position-filter .filter-btn.active { background: #374151; color: #fff; border-color: #374151; }
   [data-theme="light"] .position-filter .filter-btn.active { background: #1f2937; color: #fff; border-color: #1f2937; }
 </style>
@@ -296,12 +313,13 @@
   </header>
 
   <div class="search-box">
+    <p class="search-value-prop" id="valueProp">Проверьте DeFi-позиции и доходность</p>
     <div class="form-group">
       <label id="lblAddr">Адрес кошелька</label>
       <input type="text" id="addr" placeholder="0x...">
     </div>
     <button class="btn btn-primary" onclick="loadAssets()" id="btnLoad">📡 Загрузить активы</button>
-    <p style="font-size:11px; color:var(--muted2); margin-top:12px; margin-bottom:0;" id="apiHint">При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app</p>
+    <p class="api-hint" id="apiHint">При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app</p>
   </div>
 
   <div class="defi-block" id="defiBlock" style="display:none;">
@@ -489,6 +507,7 @@ const LANG_KEY = 'defi_lang'; const THEME_KEY = 'defi_theme';
 const MIN_POSITION_PCT = 1;
 const t = {
   ru: {
+    valueProp: 'Проверьте DeFi-позиции и доходность',
     lblAddr: 'Адрес кошелька', btnLoad: '📡 Загрузить активы', lblTotal: 'Общий баланс',
     lblChains: 'Сетей', lblTokens: 'Токенов', thToken: 'Токен', thChain: 'Сеть', thProtocol: 'Протокол', thAmount: 'Количество', thUsd: 'USD', thOpened: 'Открыта', thDays: 'Дней открыта',
     sectionDefi: 'DeFi позиции', sectionTokens: 'Токены на кошельке',
@@ -513,6 +532,7 @@ const t = {
     debankGoneHint: 'DeBank больше не показывает — укажите статус close'
   },
   en: {
+    valueProp: 'Check your DeFi positions and yield',
     lblAddr: 'Wallet address', btnLoad: '📡 Load assets', lblTotal: 'Total balance',
     lblChains: 'Chains', lblTokens: 'Tokens', thToken: 'Token', thChain: 'Chain', thProtocol: 'Protocol', thAmount: 'Amount', thUsd: 'USD', thOpened: 'Opened', thDays: 'Days open',
     sectionDefi: 'DeFi positions', sectionTokens: 'Wallet tokens',
@@ -555,6 +575,8 @@ function setLang(v) {
   document.documentElement.setAttribute('lang', v === 'ru' ? 'ru' : 'en');
   document.getElementById('langRu').classList.toggle('active', v === 'ru');
   document.getElementById('langEn').classList.toggle('active', v === 'en');
+  const vp = document.getElementById('valueProp');
+  if (vp) vp.textContent = t[lang].valueProp;
   document.getElementById('lblAddr').textContent = t[lang].lblAddr;
   document.getElementById('btnLoad').textContent = t[lang].btnLoad;
   document.getElementById('lblTotal').textContent = t[lang].lblTotal;
@@ -1233,6 +1255,7 @@ async function loadAssets() {
   loadingEl.style.display = 'block';
   loadingEl.textContent = t[lang].loading;
   document.getElementById('defiBlock').style.display = 'block';
+  document.getElementById('defiBlock').classList.remove('defi-loaded');
   document.getElementById('defiSkeleton').style.display = (addr && /^0x[a-fA-F0-9]{40}$/.test(addr)) ? 'block' : 'none';
   document.getElementById('assetDistributionWrap').style.display = 'none';
   document.getElementById('positionsTableWrap').style.display = 'none';
@@ -1319,6 +1342,7 @@ async function loadAssets() {
     document.getElementById('summaryCards').style.display = 'none';
     document.getElementById('tableWrap').style.display = 'none';
     document.getElementById('defiSkeleton').style.display = 'none';
+    requestAnimationFrame(() => document.getElementById('defiBlock').classList.add('defi-loaded'));
 
     const { shown: filteredPositions, hiddenTotalUsd } = filterPositions(positionsList);
     lastAssetPositions = positionsList;
