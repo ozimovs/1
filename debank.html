@@ -891,7 +891,8 @@ function bindPositionEdits(fmtUsd) {
         merged.daysOpen = null;
       }
       if (init != null && init > 0) {
-        const totalWithValue = (pos.total_usd || 0) + withdrawn;
+        const isClosed = merged.status === 'close';
+        const totalWithValue = isClosed ? withdrawn : (pos.total_usd || 0) + withdrawn;
         merged.profitUsd = totalWithValue - init;
         merged.roiPercent = (totalWithValue / init - 1) * 100;
         merged.apyPercent = merged.daysOpen != null && merged.daysOpen >= 1

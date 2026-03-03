@@ -131,7 +131,9 @@ function buildMergedPosition(p, id, manual, nowSec, lastUpdateDate) {
     daysOpen = Math.max(0, Math.floor((nowSec - effectiveSec) / SEC_PER_DAY));
   }
   const totalUsd = manual?.currentValueUsd ?? p.total_usd ?? 0;
-  const totalWithValue = totalUsd + (withdrawnUsd || 0);
+  const totalWithValue = (statusVal === 'close')
+    ? (withdrawnUsd || 0)
+    : totalUsd + (withdrawnUsd || 0);
   let profitUsd = null;
   let roiPercent = null;
   let apyPercent = null;
@@ -299,7 +301,9 @@ module.exports = async function handler(req, res) {
     for (const mp of fullyManualPositions) {
       const key = `${mp.chain}:${mp.protocol_id}:${mp.position_key}`;
       if (debankKeySet.has(key) || disappearedKeySet.has(key)) continue;
-      const totalWithValue = (mp.total_usd || 0) + (mp.withdrawnUsd || 0);
+      const totalWithValue = (mp.status === 'close')
+        ? (mp.withdrawnUsd || 0)
+        : (mp.total_usd || 0) + (mp.withdrawnUsd || 0);
       if (mp.manualInitialUsd != null && mp.manualInitialUsd > 0) {
         mp.profitUsd = totalWithValue - mp.manualInitialUsd;
         mp.roiPercent = (totalWithValue / mp.manualInitialUsd - 1) * 100;
