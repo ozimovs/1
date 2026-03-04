@@ -1182,7 +1182,6 @@ function renderPositionsTable(filter, data) {
     }
     const aprDisplay = fmtCurYld(aprVal);
     const aprClass = aprVal != null && aprVal > 0 ? 'profit-positive' : '';
-    const statusVal = (pos.status || 'open').toLowerCase();
     const statusClass = (statusVal === 'close' || statusVal === 'closed') ? 'close' : 'open';
     const statusText = statusClass === 'close' ? 'close' : 'open';
     const editBtnText = t[lang].editBtn;
