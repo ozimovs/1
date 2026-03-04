@@ -142,9 +142,22 @@ function buildMergedPosition(p, id, manual, nowSec, lastUpdateDate) {
     : totalUsd + (withdrawnUsd || 0);
   let profitUsd = null;
   let roiPercent = null;
+  let aprPercent = null;
   if (manualInitialUsd != null && manualInitialUsd > 0) {
     profitUsd = totalWithValue - manualInitialUsd;
     roiPercent = (totalWithValue / manualInitialUsd - 1) * 100;
+    // Для закрытых позиций считаем реализованный APR сделки на основе дат открытия/закрытия и суммы вывода
+    if (statusVal === 'close' && manualOpenedAt && manualClosedAt) {
+      const openStr = String(manualOpenedAt).slice(0, 10);
+      const closeStr = String(manualClosedAt).slice(0, 10);
+      const openMs = new Date(openStr + 'T00:00:00Z').getTime();
+      const closeMs = new Date(closeStr + 'T00:00:00Z').getTime();
+      if (!Number.isNaN(openMs) && !Number.isNaN(closeMs) && closeMs > openMs) {
+        const days = Math.max(1, Math.floor((closeMs - openMs) / (SEC_PER_DAY * 1000)));
+        const roi = (withdrawnUsd || 0) / manualInitialUsd - 1;
+        aprPercent = roi * (365 / days) * 100;
+      }
+    }
   }
   return {
     ...p,
@@ -158,6 +171,7 @@ function buildMergedPosition(p, id, manual, nowSec, lastUpdateDate) {
     daysOpen,
     profitUsd,
     roiPercent,
+    aprPercent,
     lastUpdateDate,
     fromManualOnly: false,
   };
@@ -222,6 +236,7 @@ async function getFullyManualPositions(wallet) {
       daysOpen: null,
       profitUsd: null,
       roiPercent: null,
+      aprPercent: null,
       lastUpdateDate: null,
       fromManualOnly: true,
       isFullyManual: isFullyManual,
@@ -303,16 +318,31 @@ module.exports = async function handler(req, res) {
     for (const mp of fullyManualPositions) {
       const key = `${mp.chain}:${mp.protocol_id}:${mp.position_key}`;
       if (debankKeySet.has(key) || disappearedKeySet.has(key)) continue;
-      const totalWithValue = (mp.status === 'close')
+      const isClosed = (mp.status || 'open').toLowerCase() === 'close';
+      const totalWithValue = isClosed
         ? (mp.withdrawnUsd || 0)
         : (mp.total_usd || 0) + (mp.withdrawnUsd || 0);
       if (mp.manualInitialUsd != null && mp.manualInitialUsd > 0) {
         mp.profitUsd = totalWithValue - mp.manualInitialUsd;
         mp.roiPercent = (totalWithValue / mp.manualInitialUsd - 1) * 100;
         if (mp.manualOpenedAt) {
-          const dateStr = String(mp.manualOpenedAt).slice(0, 10);
-          const effectiveSec = Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000);
-          mp.daysOpen = Math.max(0, Math.floor((nowSec - effectiveSec) / SEC_PER_DAY));
+          const openStr = String(mp.manualOpenedAt).slice(0, 10);
+          const openSec = Math.floor(new Date(openStr + 'T00:00:00Z').getTime() / 1000);
+          let endSec = nowSec;
+          if (isClosed && mp.manualClosedAt) {
+            const closeStr = String(mp.manualClosedAt).slice(0, 10);
+            endSec = Math.floor(new Date(closeStr + 'T00:00:00Z').getTime() / 1000);
+          }
+          mp.daysOpen = Math.max(0, Math.floor((endSec - openSec) / SEC_PER_DAY));
+          if (isClosed && mp.manualClosedAt) {
+            const openMs = openSec * 1000;
+            const closeMs = endSec * 1000;
+            if (closeMs > openMs) {
+              const days = Math.max(1, Math.floor((closeMs - openMs) / (SEC_PER_DAY * 1000)));
+              const roi = (mp.withdrawnUsd || 0) / mp.manualInitialUsd - 1;
+              mp.aprPercent = roi * (365 / days) * 100;
+            }
+          }
         }
       }
       mp.lastUpdateDate = lastUpdateDate;

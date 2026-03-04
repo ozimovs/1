@@ -824,7 +824,13 @@ function bindPositionEdits(fmtUsd) {
     tr.cells[7].textContent = profitUsd != null && merged.manualInitialUsd != null ? fmtUsd(profitUsd) : '—';
     tr.cells[7].className = 'text-right ' + profitClass;
     const roiClass = merged.roiPercent != null && merged.manualInitialUsd != null ? (merged.roiPercent > 0 ? 'profit-positive' : (merged.roiPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
-    const aprVal = calcCurrentYield(merged);
+    const statusVal = (merged.status || 'open').toLowerCase();
+    let aprVal = null;
+    if (statusVal === 'close' || statusVal === 'closed') {
+      aprVal = (typeof merged.aprPercent === 'number' && !isNaN(merged.aprPercent)) ? merged.aprPercent : null;
+    } else {
+      aprVal = calcCurrentYield(merged);
+    }
     const aprClass = aprVal != null && aprVal > 0 ? 'profit-positive' : '';
     tr.cells[8].textContent = merged.roiPercent != null && merged.manualInitialUsd != null ? fmtRoi(merged.roiPercent) : '—';
     tr.cells[8].className = 'text-right ' + roiClass;
@@ -1167,7 +1173,13 @@ function renderPositionsTable(filter, data) {
     }
     const roiDisplay = pos.roiPercent != null && pos.manualInitialUsd != null ? fmtRoi(pos.roiPercent) : '—';
     const roiClass = pos.roiPercent != null && pos.manualInitialUsd != null ? (pos.roiPercent > 0 ? 'profit-positive' : (pos.roiPercent < 0 ? 'profit-negative' : 'profit-zero')) : '';
-    const aprVal = calcCurrentYield(pos);
+    const statusVal = (pos.status || 'open').toLowerCase();
+    let aprVal = null;
+    if (statusVal === 'close' || statusVal === 'closed') {
+      aprVal = (typeof pos.aprPercent === 'number' && !isNaN(pos.aprPercent)) ? pos.aprPercent : null;
+    } else {
+      aprVal = calcCurrentYield(pos);
+    }
     const aprDisplay = fmtCurYld(aprVal);
     const aprClass = aprVal != null && aprVal > 0 ? 'profit-positive' : '';
     const statusVal = (pos.status || 'open').toLowerCase();
