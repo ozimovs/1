@@ -2,7 +2,9 @@
 
 ## POST /api/defi-position-manual
 
-**Поле с датой:** `openedAt` (строка YYYY-MM-DD)
+**Поля с датой:** 
+- `openedAt` — дата открытия (строка YYYY-MM-DD)  
+- `closedAt` — дата закрытия (опционально, строка YYYY-MM-DD)
 
 **Принимает:**
 ```json
@@ -13,6 +15,7 @@
   "position_type": "lp",
   "position_key": "0x19b683a2...",
   "openedAt": "2026-01-09",
+  "closedAt": "2026-03-03",
   "initialDepositUsd": 67265.0
 }
 ```

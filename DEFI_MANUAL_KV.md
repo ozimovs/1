@@ -23,6 +23,7 @@
   "position_type": "lending",
   "position_key": "0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9",
   "opened_at_manual": "2024-02-20T00:00:00.000Z",
+  "closedAt": "2024-06-10",
   "initial_deposit_usd": 73674.36,
   "created_at": "2025-02-23T08:00:00.000Z",
   "updated_at": "2025-02-23T08:00:00.000Z"

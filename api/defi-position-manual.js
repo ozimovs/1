@@ -3,7 +3,7 @@
  * Сохраняет ручные значения с merge — никогда не затирает существующие поля.
  * DELETE /api/defi-position-manual — удаляет ручную позицию.
  * Ключ Redis: manual:{wallet}:{chain}:{protocolId}:{positionKey}
- * Значение: { openedAt, initialDepositUsd, withdrawnUsd, status, isFullyManual, protocolName, currentValueUsd, tokenSymbol, description }
+ * Значение: { openedAt, closedAt, initialDepositUsd, withdrawnUsd, status, isFullyManual, protocolName, currentValueUsd, tokenSymbol, description }
  * status: "open" | "close"
  */
 
@@ -50,6 +50,12 @@ async function handlePost(req, res) {
   if (openedAt !== undefined) {
     const s = String(openedAt).trim();
     openedAt = s === '' ? null : s;
+  }
+
+  let closedAt = body.closedAt;
+  if (closedAt !== undefined) {
+    const s = String(closedAt).trim();
+    closedAt = s === '' ? null : s;
   }
 
   let initialDepositUsd = body.initialDepositUsd;
@@ -102,6 +108,7 @@ async function handlePost(req, res) {
 
     const updated = { ...parsed };
     if (openedAt !== undefined) updated.openedAt = openedAt;
+    if (closedAt !== undefined) updated.closedAt = closedAt;
     if (initialDepositUsd !== undefined) updated.initialDepositUsd = initialDepositUsd;
     if (withdrawnUsd !== undefined) updated.withdrawnUsd = withdrawnUsd;
     if (currentValueUsd !== undefined) updated.currentValueUsd = currentValueUsd;

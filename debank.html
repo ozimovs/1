@@ -430,6 +430,10 @@
         <input type="date" id="modalDate" />
       </div>
       <div class="form-group">
+        <label id="modalLblCloseDate">Дата закрытия (ДД.ММ.ГГГГ)</label>
+        <input type="date" id="modalCloseDate" />
+      </div>
+      <div class="form-group">
         <label id="modalLblInitial">Начальная сумма, USD</label>
         <input type="number" id="modalInitial" step="0.01" min="0" placeholder="0" />
       </div>
@@ -522,7 +526,7 @@ const t = {
     noTokens: 'Нет токенов с балансом > $0.01', noPositions: 'Нет DeFi-позиций', walletTokensRow: 'Токены на кошельке', otherPositionsRow: 'Прочие позиции',
     apiUnavailable: 'API недоступен. Разверните проект на Vercel и откройте сайт по Vercel-адресу.',
     apiHint: 'При ошибке загрузки: откройте debank.html?api=https://ваш-vercel.vercel.app',
-    modalTitle: 'Редактировать позицию', modalLblDate: 'Дата открытия (ДД.ММ.ГГГГ)', modalLblInitial: 'Начальная сумма, USD',
+    modalTitle: 'Редактировать позицию', modalLblDate: 'Дата открытия (ДД.ММ.ГГГГ)', modalLblCloseDate: 'Дата закрытия (ДД.ММ.ГГГГ)', modalLblInitial: 'Начальная сумма, USD',
     modalLblWithdrawn: 'Выведено, USD', modalLblStatus: 'Состояние',
     modalCancel: 'Отмена', modalSave: 'Сохранить', modalSaving: 'Сохранение...', modalSaved: 'Сохранено',
     modalError: 'Ошибка сохранения', editBtn: '✏️',
@@ -547,7 +551,7 @@ const t = {
     noTokens: 'No tokens with balance > $0.01', noPositions: 'No DeFi positions', walletTokensRow: 'Wallet tokens', otherPositionsRow: 'Other positions',
     apiUnavailable: 'API unavailable. Deploy to Vercel and open the site via your Vercel URL.',
     apiHint: 'If load fails: open debank.html?api=https://your-vercel.vercel.app',
-    modalTitle: 'Edit position', modalLblDate: 'Date opened (DD.MM.YYYY)', modalLblInitial: 'Initial amount, USD',
+    modalTitle: 'Edit position', modalLblDate: 'Date opened (DD.MM.YYYY)', modalLblCloseDate: 'Date closed (DD.MM.YYYY)', modalLblInitial: 'Initial amount, USD',
     modalLblWithdrawn: 'Withdrawn, USD', modalLblStatus: 'Status',
     modalCancel: 'Cancel', modalSave: 'Save', modalSaving: 'Saving...', modalSaved: 'Saved',
     modalError: 'Save failed', editBtn: '✏️',
@@ -607,7 +611,7 @@ function setLang(v) {
   if (hint) hint.textContent = t[lang].apiHint;
   const modalTitle = document.getElementById('modalTitle');
   if (modalTitle) modalTitle.textContent = t[lang].modalTitle;
-  ['modalLblDate','modalLblInitial','modalLblWithdrawn','modalLblStatus','modalCancel','modalSave'].forEach(id => {
+  ['modalLblDate','modalLblCloseDate','modalLblInitial','modalLblWithdrawn','modalLblStatus','modalCancel','modalSave'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = t[lang][id];
   });
@@ -778,6 +782,7 @@ function bindPositionEdits(fmtUsd) {
   const tableWrap = document.getElementById('positionsTableWrap');
   const modal = document.getElementById('positionModal');
   const modalDate = document.getElementById('modalDate');
+  const modalCloseDate = document.getElementById('modalCloseDate');
   const modalInitial = document.getElementById('modalInitial');
   const modalWithdrawn = document.getElementById('modalWithdrawn');
   const modalStatusSelect = document.getElementById('modalStatusSelect');
@@ -808,6 +813,11 @@ function bindPositionEdits(fmtUsd) {
     tr.cells[1].textContent = merged.manualOpenedAt ? fmtDateDDMMYYYY(merged.manualOpenedAt) : '—';
     tr.cells[2].textContent = merged.manualInitialUsd != null ? fmtUsd(merged.manualInitialUsd) : '—';
     tr.cells[3].textContent = merged.daysOpen != null ? String(merged.daysOpen) : '—';
+    const isClosed = (merged.status || 'open').toLowerCase() === 'close';
+    const updatedDisplay = isClosed
+      ? (merged.manualClosedAt ? fmtDateDDMMYYYY(merged.manualClosedAt) : '—')
+      : (merged.lastUpdateDate ? fmtDateDDMMYYYY(merged.lastUpdateDate) : '—');
+    tr.cells[5].textContent = updatedDisplay;
     tr.cells[6].textContent = merged.withdrawnUsd != null && merged.withdrawnUsd !== 0 ? fmtUsd(merged.withdrawnUsd) : '—';
     const profitUsd = merged.profitUsd;
     const profitClass = profitUsd != null && merged.manualInitialUsd != null ? (profitUsd > 0 ? 'profit-positive' : (profitUsd < 0 ? 'profit-negative' : 'profit-zero')) : 'profit-zero';
@@ -841,6 +851,9 @@ function bindPositionEdits(fmtUsd) {
     tableWrap.dataset._editWallet = tableWrap.dataset.wallet || '';
     document.getElementById('modalTitle').textContent = (t[lang].modalTitle + ': ' + (pos.protocol_name || '')).trim();
     modalDate.value = (pos.manualOpenedAt ?? '').slice(0, 10);
+    if (modalCloseDate) {
+      modalCloseDate.value = (pos.manualClosedAt ?? '').slice(0, 10);
+    }
     modalInitial.value = pos.manualInitialUsd != null ? String(pos.manualInitialUsd) : '';
     modalWithdrawn.value = pos.withdrawnUsd != null && pos.withdrawnUsd !== 0 ? String(pos.withdrawnUsd) : '';
     modalStatusSelect.value = (pos.status || 'open').toLowerCase() === 'close' ? 'close' : 'open';
@@ -860,6 +873,7 @@ function bindPositionEdits(fmtUsd) {
     const base = tableWrap.dataset._editBase || tableWrap.dataset.base || window.location.origin;
     const wallet = tableWrap.dataset._editWallet || tableWrap.dataset.wallet || '';
     const dateVal = modalDate.value.trim();
+    const closeDateVal = modalCloseDate ? modalCloseDate.value.trim() : '';
     const initialVal = modalInitial.value.trim();
     const withdrawnVal = modalWithdrawn.value.trim();
     const statusVal = modalStatusSelect.value;
@@ -873,6 +887,7 @@ function bindPositionEdits(fmtUsd) {
         protocolId: pos.protocol_id,
         positionKey: pos.position_key || 'default',
         openedAt: dateVal || null,
+        closedAt: statusVal === 'close' ? (closeDateVal || null) : null,
         initialDepositUsd: initialVal ? Number(initialVal) : null,
         currentValueUsd: pos.total_usd != null ? Number(pos.total_usd) : null,
         withdrawnUsd: withdrawnVal ? Number(withdrawnVal) : null,
@@ -896,6 +911,7 @@ function bindPositionEdits(fmtUsd) {
       const merged = {
         ...pos,
         manualOpenedAt: saved.openedAt ?? null,
+        manualClosedAt: saved.closedAt ?? null,
         manualInitialUsd: saved.initialDepositUsd ?? null,
         withdrawnUsd: saved.withdrawnUsd ?? 0,
         status: (saved.status || 'open').toLowerCase() === 'close' ? 'close' : 'open'
@@ -1137,7 +1153,10 @@ function renderPositionsTable(filter, data) {
     const dateOpenDisplay = pos.manualOpenedAt ? fmtDateDDMMYYYY(pos.manualOpenedAt) : '—';
     const daysOpenDisplay = pos.daysOpen != null ? String(pos.daysOpen) : '—';
     const initialDisplay = pos.manualInitialUsd != null ? fmtUsd(pos.manualInitialUsd) : '—';
-    const updatedDisplay = pos.lastUpdateDate ? fmtDateDDMMYYYY(pos.lastUpdateDate) : '—';
+    const isClosed = (pos.status || 'open').toLowerCase() === 'close';
+    const updatedDisplay = isClosed
+      ? (pos.manualClosedAt ? fmtDateDDMMYYYY(pos.manualClosedAt) : '—')
+      : (pos.lastUpdateDate ? fmtDateDDMMYYYY(pos.lastUpdateDate) : '—');
     const withdrawnDisplay = pos.withdrawnUsd != null && pos.withdrawnUsd !== 0 ? fmtUsd(pos.withdrawnUsd) : '—';
     const profitUsd = pos.profitUsd;
     let profitDisplay = '—';

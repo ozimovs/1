@@ -122,13 +122,19 @@ function buildMergedPosition(p, id, manual, nowSec, lastUpdateDate) {
   const manualOpenedAt = manual?.openedAt ?? manual?.opened_at_manual ?? null;
   const manualInitialUsd = manual?.initialDepositUsd ?? manual?.initial_deposit_usd ?? null;
   const withdrawnUsd = manual?.withdrawnUsd ?? 0;
+  const manualClosedAt = manual?.closedAt ?? null;
   const status = (manual?.status || 'open').toLowerCase();
   const statusVal = (status === 'close' || status === 'closed') ? 'close' : 'open';
   let daysOpen = null;
   if (manualOpenedAt) {
     const dateStr = String(manualOpenedAt).slice(0, 10);
-    const effectiveSec = Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000);
-    daysOpen = Math.max(0, Math.floor((nowSec - effectiveSec) / SEC_PER_DAY));
+    const openSec = Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000);
+    let endSec = nowSec;
+    if (statusVal === 'close' && manualClosedAt) {
+      const closeStr = String(manualClosedAt).slice(0, 10);
+      endSec = Math.floor(new Date(closeStr + 'T00:00:00Z').getTime() / 1000);
+    }
+    daysOpen = Math.max(0, Math.floor((endSec - openSec) / SEC_PER_DAY));
   }
   const totalUsd = manual?.currentValueUsd ?? p.total_usd ?? 0;
   const totalWithValue = (statusVal === 'close')
@@ -145,6 +151,7 @@ function buildMergedPosition(p, id, manual, nowSec, lastUpdateDate) {
     wallet: id,
     total_usd: totalUsd,
     manualOpenedAt: manualOpenedAt || null,
+    manualClosedAt: manualClosedAt || null,
     manualInitialUsd: manualInitialUsd ?? null,
     withdrawnUsd: withdrawnUsd ?? 0,
     status: statusVal,
@@ -184,6 +191,7 @@ async function getFullyManualPositions(wallet) {
     if (!isFullyManual && statusVal !== 'close') continue;
 
     const manualOpenedAt = manual?.openedAt ?? manual?.opened_at_manual ?? null;
+    const manualClosedAt = manual?.closedAt ?? null;
     const manualInitialUsd = manual?.initialDepositUsd ?? manual?.initial_deposit_usd ?? null;
     const withdrawnUsd = manual?.withdrawnUsd ?? 0;
     const currentValueUsd = manual?.currentValueUsd ?? 0;
@@ -204,6 +212,7 @@ async function getFullyManualPositions(wallet) {
       tokens: tokenSymbol ? [{ symbol: tokenSymbol, amount: 0, amount_usd: currentValueUsd }] : [],
       total_usd: currentValueUsd,
       manualOpenedAt: manualOpenedAt || null,
+      manualClosedAt: manualClosedAt || null,
       manualInitialUsd: manualInitialUsd ?? null,
       withdrawnUsd: withdrawnUsd ?? 0,
       currentValueUsd: currentValueUsd,
