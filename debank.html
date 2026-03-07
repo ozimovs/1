@@ -278,6 +278,7 @@
   .portfolio-stat-value { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 800; color: var(--accent); }
   .defi-header-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
   .defi-header-row .section-title { margin-bottom: 0; font-size: 18px; font-weight: 600; }
+  .defi-header-actions { display: flex; gap: 8px; align-items: center; }
   .btn-sm { padding: 6px 12px; font-size: 12px; }
   .btn-danger { background: var(--danger); color: #fff; }
   .btn-danger:hover { background: #dc2626; }
@@ -330,7 +331,10 @@
   <div class="defi-block" id="defiBlock" style="display:none;">
     <div class="defi-header-row">
       <h2 class="section-title" id="sectionDefi">DeFi позиции</h2>
-      <button class="btn btn-secondary btn-sm" id="btnAddManual" style="display:none;">+ Добавить</button>
+      <div class="defi-header-actions">
+        <button class="btn btn-secondary btn-sm" id="btnExportCsv" style="display:none;" onclick="exportPositionsCSV()" data-i18n="exportCsv">⬇ Экспорт CSV</button>
+        <button class="btn btn-secondary btn-sm" id="btnAddManual" style="display:none;">+ Добавить</button>
+      </div>
     </div>
     <div class="portfolio-stats-row" id="portfolioStatsRow" style="display:none;">
       <div class="portfolio-stat-card">
@@ -537,7 +541,8 @@ const t = {
     manualErrorChain: 'Укажите сеть', manualErrorProtocol: 'Укажите протокол', confirmDelete: 'Удалить эту позицию?',
     manualModalDelete: 'Удалить',
     filterAll: 'Все', filterOpen: 'Открытые', filterClosed: 'Закрытые',
-    debankGoneHint: 'DeBank больше не показывает — укажите статус close'
+    debankGoneHint: 'DeBank больше не показывает — укажите статус close',
+    exportCsv: '⬇ Экспорт CSV'
   },
   en: {
     valueProp: 'Check your DeFi positions and yield',
@@ -562,7 +567,8 @@ const t = {
     manualErrorChain: 'Enter chain', manualErrorProtocol: 'Enter protocol', confirmDelete: 'Delete this position?',
     manualModalDelete: 'Delete',
     filterAll: 'All', filterOpen: 'Open', filterClosed: 'Closed',
-    debankGoneHint: 'DeBank no longer shows — set status to close'
+    debankGoneHint: 'DeBank no longer shows — set status to close',
+    exportCsv: '⬇ Export CSV'
   }
 };
 let lang = localStorage.getItem(LANG_KEY) || 'ru';
@@ -627,6 +633,8 @@ function setLang(v) {
   if (manualModalSave) manualModalSave.textContent = t[lang].modalSave;
   if (manualModalDelete) manualModalDelete.textContent = t[lang].manualModalDelete;
   if (btnAddManual) btnAddManual.textContent = t[lang].btnAddManual;
+  const btnExport = document.getElementById('btnExportCsv');
+  if (btnExport && t[lang].exportCsv) btnExport.textContent = t[lang].exportCsv;
   document.querySelectorAll('.position-filter .filter-btn').forEach(btn => {
     const k = btn.dataset.filter === 'all' ? 'filterAll' : btn.dataset.filter === 'open' ? 'filterOpen' : 'filterClosed';
     if (t[lang][k]) btn.textContent = t[lang][k];
@@ -677,6 +685,83 @@ function fmtCurYld(v) {
   if (v == null || isNaN(v)) return '—';
   const sep = lang === 'ru' ? ',' : '.';
   return Number(v).toFixed(1).replace('.', sep) + '%';
+}
+
+function escapeCSV(val) {
+  if (val == null) return '';
+  const s = String(val);
+  if (s.includes(';') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function exportPositionsCSV() {
+  const positions = lastAssetPositions;
+  const data = lastPositionsData || {};
+  const wallet = data.addrLower || '';
+  const cols = [
+    'wallet', 'chain', 'protocol_id', 'protocol_name', 'protocol_site_url',
+    'position_type', 'position_name', 'position_key',
+    'date_open', 'date_close', 'initial_usd', 'current_usd', 'withdrawn_usd',
+    'profit_usd', 'roi_pct', 'apr_pct', 'days_open', 'status', 'last_updated',
+    'debank_gone', 'from_manual_only', 'is_fully_manual',
+    'token_symbol', 'description', 'tokens'
+  ];
+  const rows = [cols.join(';')];
+  const list = Array.isArray(positions) ? positions : [];
+  for (const p of list) {
+    const tokensStr = Array.isArray(p.tokens)
+      ? p.tokens.map(t => `${t.symbol || '?'}:${t.amount ?? 0}:${t.amount_usd ?? 0}`).join(' | ')
+      : '';
+    rows.push([
+      escapeCSV(p.wallet || wallet),
+      escapeCSV(p.chain),
+      escapeCSV(p.protocol_id),
+      escapeCSV(p.protocol_name),
+      escapeCSV(p.protocol_site_url),
+      escapeCSV(p.position_type),
+      escapeCSV(p.position_name),
+      escapeCSV(p.position_key),
+      escapeCSV((p.manualOpenedAt || '').slice(0, 10)),
+      escapeCSV((p.manualClosedAt || '').slice(0, 10)),
+      p.manualInitialUsd != null ? String(p.manualInitialUsd) : '',
+      p.total_usd != null ? String(p.total_usd) : '',
+      p.withdrawnUsd != null ? String(p.withdrawnUsd) : '',
+      p.profitUsd != null ? String(p.profitUsd) : '',
+      p.roiPercent != null ? String(p.roiPercent) : '',
+      p.aprPercent != null ? String(p.aprPercent) : '',
+      p.daysOpen != null ? String(p.daysOpen) : '',
+      escapeCSV(p.status),
+      escapeCSV((p.lastUpdateDate || '').slice(0, 10)),
+      p.debankGone ? '1' : '0',
+      p.fromManualOnly ? '1' : '0',
+      p.isFullyManual ? '1' : '0',
+      escapeCSV(p.tokenSymbol),
+      escapeCSV(p.description),
+      escapeCSV(tokensStr)
+    ].join(';'));
+  }
+  if (data.hiddenTotalUsd >= 0.01) {
+    rows.push([
+      escapeCSV(wallet), '', '', t[lang].otherPositionsRow || 'Other positions', '', '', '', '',
+      '', '', '', String(data.hiddenTotalUsd), '', '', '', '', '', 'open', '', '0', '0', '0', '', '', ''
+    ].join(';'));
+  }
+  if (data.walletTokensUsd >= 0.01) {
+    rows.push([
+      escapeCSV(wallet), '', '', t[lang].walletTokensRow || 'Wallet tokens', '', '', '', '',
+      '', '', '', String(data.walletTokensUsd), '', '', '', '', '', 'open', '', '0', '0', '0', '', '', ''
+    ].join(';'));
+  }
+  const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const ts = new Date().toISOString().slice(0, 10);
+  a.download = `defi_positions_${wallet ? wallet.slice(2, 10) : 'export'}_${ts}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 const ASSET_CHART_COLORS = ['#34d399','#60a5fa','#a78bfa','#38bdf8','#fbbf24','#f472b6','#22d3ee'];
@@ -1375,6 +1460,8 @@ async function loadAssets() {
     if (filteredPositions.length > 0 || walletTokensUsd >= 0.01 || hiddenTotalUsd >= 0.01) {
       positionsTableWrap.style.display = 'block';
       positionFilter.style.display = 'flex';
+      const btnExport = document.getElementById('btnExportCsv');
+      if (btnExport) { btnExport.style.display = 'inline-flex'; btnExport.textContent = t[lang].exportCsv; }
       lastPositionsData = {
         filteredPositions,
         hiddenTotalUsd,
@@ -1429,6 +1516,7 @@ async function loadAssets() {
       positionsTableWrap.style.display = 'block';
       document.getElementById('positionFilter').style.display = 'none';
       document.getElementById('portfolioStatsRow').style.display = 'none';
+      document.getElementById('btnExportCsv').style.display = 'none';
       document.getElementById('btnAddManual').style.display = 'inline-flex';
       bindManualPositionModal(base, addrLower);
       document.getElementById('positionsTableBody').innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted2);padding:32px;">' + t[lang].noPositions + '</td></tr>';
