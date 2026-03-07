@@ -791,6 +791,7 @@ function filterPositions(positions) {
     const isClosed = statusVal === 'close' || statusVal === 'closed';
     if (isClosed) { shown.push(pos); return; }
     const usd = pos.total_usd ?? 0;
+    if ((pos.manualInitialUsd ?? 0) > 0 && usd < 0.01) { shown.push(pos); return; }
     if (totalOpenUsd < 0.01) { shown.push(pos); return; }
     const pct = (usd / totalOpenUsd) * 100;
     if (pct >= MIN_POSITION_PCT) { shown.push(pos); } else { hidden.push(pos); }
