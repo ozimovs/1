@@ -772,7 +772,10 @@ function filterPositions(positions) {
     const statusVal = (pos.status || 'open').toLowerCase();
     const isClosed = statusVal === 'close' || statusVal === 'closed';
     if (isClosed) return true;
-    if (pos.fromManualOnly && (pos.total_usd == null || pos.total_usd < 0.01)) return false;
+    if (pos.fromManualOnly && (pos.total_usd == null || pos.total_usd < 0.01)) {
+      if ((pos.manualInitialUsd ?? 0) > 0) return true;
+      return false;
+    }
     return true;
   });
   const totalOpenUsd = validPositions.reduce((sum, pos) => {
