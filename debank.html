@@ -205,13 +205,22 @@
   .modal-overlay.open { display: flex; }
   .modal-box {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-    padding: 24px; max-width: 400px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    padding: 24px; max-width: 420px; width: 100%; max-height: calc(100vh - 48px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.25); overflow-y: auto; overflow-x: hidden;
     transition: transform 0.2s;
   }
   .modal-overlay.open .modal-box { animation: modalPop 0.2s ease-out forwards; }
   @keyframes modalPop { from { transform: scale(0.98); opacity: 0.98; } to { transform: scale(1); opacity: 1; } }
   .modal-box h3 { margin-bottom: 20px; font-size: 18px; color: var(--text); }
-  .modal-box .form-group { margin-bottom: 16px; }
+  .modal-box .form-group { margin-bottom: 12px; }
+  .modal-header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .modal-header-row h3 { margin: 0; flex-shrink: 0; }
+  .modal-close-btn {
+    flex-shrink: 0; width: 32px; height: 32px; padding: 0; border: none; border-radius: 6px;
+    background: var(--surface2); color: var(--muted2); font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s;
+  }
+  .modal-close-btn:hover { background: var(--border); color: var(--text); }
   .modal-box .form-group label { display: block; margin-bottom: 6px; font-size: 11px; color: var(--muted2); text-transform: uppercase; }
   .modal-box input, .modal-box select { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; box-sizing: border-box; }
   .modal-box input:focus, .modal-box select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,229,160,0.2); }
@@ -460,9 +469,12 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="manualPositionModal">
-    <div class="modal-box">
-      <h3 id="manualModalTitle">Добавить позицию</h3>
+  <div class="modal-overlay" id="manualPositionModal" onclick="if(event.target===this)closeManualModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-header-row">
+        <h3 id="manualModalTitle">Добавить позицию</h3>
+        <button type="button" class="modal-close-btn" onclick="closeManualModal()" aria-label="Закрыть">×</button>
+      </div>
       <div class="form-group">
         <label id="manualLblChain">Сеть / блокчейн</label>
         <input type="text" id="manualChain" placeholder="solana, ton, eth..." />
@@ -1111,6 +1123,8 @@ function bindManualPositionModal(base, wallet) {
   btnAdd.addEventListener('click', () => openModal(null));
   btnCancel.addEventListener('click', closeModal);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  window.closeManualModal = closeModal;
 
   window.openManualEditModal = function(pos) {
     openModal(pos);
