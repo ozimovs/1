@@ -299,12 +299,14 @@ module.exports = async function handler(req, res) {
     }
 
     const disappearedKeySet = new Set();
+    const toCache = [...rawPositions];
     const cache = await getDebankCache(id);
     if (cache && Array.isArray(cache.positions)) {
       for (const p of cache.positions) {
         const key = `${p.chain}:${p.protocol_id}:${p.position_key}`;
         if (debankKeySet.has(key)) continue;
         disappearedKeySet.add(key);
+        toCache.push(p);
         const manual = await getManualRecord(id, p);
         const merged = buildMergedPosition(p, id, manual, nowSec, lastUpdateDate);
         merged.debankGone = true;
@@ -312,7 +314,43 @@ module.exports = async function handler(req, res) {
         positions.push(merged);
       }
     }
-    setDebankCache(id, rawPositions);
+
+    // Восстановление «осиротевших» manual: позиция была в DeBank, затерялась из кэша,
+    // но ручные данные в Redis есть (status open, не fullyManual) — показываем как debankGone
+    const { redisGet, redisKeys } = require('../lib/redis');
+    const manualKeys = await redisKeys(`manual:${id}:*`);
+    for (const rk of manualKeys) {
+      const parsed = parseManualKey(rk);
+      if (!parsed) continue;
+      const posKey = `${parsed.chain}:${parsed.protocolId}:${parsed.positionKey}`;
+      if (debankKeySet.has(posKey) || disappearedKeySet.has(posKey)) continue;
+      const manual = await redisGet(rk);
+      if (!manual || typeof manual !== 'object') continue;
+      const isFullyManual = manual.isFullyManual === true;
+      const status = (manual.status || 'open').toLowerCase();
+      const statusVal = (status === 'close' || status === 'closed') ? 'close' : 'open';
+      if (isFullyManual || statusVal === 'close') continue;
+      const rawSkeleton = {
+        chain: parsed.chain,
+        protocol_id: parsed.protocolId,
+        protocol_name: manual.protocolName || parsed.protocolId,
+        protocol_logo_url: null,
+        protocol_site_url: null,
+        position_type: 'stake',
+        position_name: manual.protocolName || parsed.protocolId,
+        position_key: parsed.positionKey,
+        tokens: [],
+        total_usd: manual.currentValueUsd ?? 0,
+      };
+      disappearedKeySet.add(posKey);
+      toCache.push(rawSkeleton);
+      const merged = buildMergedPosition(rawSkeleton, id, manual, nowSec, lastUpdateDate);
+      merged.debankGone = true;
+      merged.fromManualOnly = true;
+      positions.push(merged);
+    }
+
+    setDebankCache(id, toCache);
 
     const fullyManualPositions = await getFullyManualPositions(id);
     for (const mp of fullyManualPositions) {
