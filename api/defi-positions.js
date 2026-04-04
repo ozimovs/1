@@ -177,25 +177,38 @@ function buildMergedPosition(p, id, manual, nowSec, lastUpdateDate) {
   };
 }
 
-async function getManualRecord(wallet, pos) {
+/** Одна выборка всех manual-ключей кошелька + параллельное чтение значений (без N+1). */
+async function loadManualMap(wallet) {
   try {
-    const { redisGet } = require('../lib/redis');
-    const k = makeManualKey(wallet, pos.chain, pos.protocol_id, pos.position_key);
-    return await redisGet(k);
+    const { redisGet, redisKeys } = require('../lib/redis');
+    const keys = await redisKeys(`manual:${wallet}:*`);
+    const map = new Map();
+    if (!keys.length) return { keys: [], map };
+    const rows = await Promise.all(
+      keys.map((k) =>
+        redisGet(k).then((v) => [k, v && typeof v === 'object' ? v : null])
+      )
+    );
+    for (const [k, v] of rows) {
+      if (v) map.set(k, v);
+    }
+    return { keys, map };
   } catch {
-    return null;
+    return { keys: [], map: new Map() };
   }
 }
 
-async function getFullyManualPositions(wallet) {
-  const { redisGet, redisKeys } = require('../lib/redis');
-  const prefix = `manual:${wallet}:`;
-  const keys = await redisKeys(prefix + '*');
+function getManualForPos(manualMap, wallet, pos) {
+  const k = makeManualKey(wallet, pos.chain, pos.protocol_id, pos.position_key);
+  return manualMap.get(k) ?? null;
+}
+
+function buildFullyManualPositions(wallet, manualMap, keys) {
   const positions = [];
   for (const key of keys) {
     const parsed = parseManualKey(key);
     if (!parsed) continue;
-    const manual = await redisGet(key);
+    const manual = manualMap.get(key);
     if (!manual || typeof manual !== 'object') continue;
 
     const isFullyManual = manual.isFullyManual === true;
@@ -265,9 +278,17 @@ module.exports = async function handler(req, res) {
 
   const url = `${DEBANK_BASE}/user/all_complex_protocol_list?id=${encodeURIComponent(id)}`;
   const headers = { Accept: 'application/json', AccessKey: apiKey };
+  const debankFetchOpts = { headers };
+  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+    debankFetchOpts.signal = AbortSignal.timeout(55000);
+  }
 
   try {
-    const response = await fetch(url, { headers });
+    const [response, manualData] = await Promise.all([
+      fetch(url, debankFetchOpts),
+      loadManualMap(id),
+    ]);
+    const manualMap = manualData.map;
     const text = await response.text();
 
     let data;
@@ -294,7 +315,7 @@ module.exports = async function handler(req, res) {
 
     const positions = [];
     for (const p of rawPositions) {
-      const manual = await getManualRecord(id, p);
+      const manual = getManualForPos(manualMap, id, p);
       positions.push(buildMergedPosition(p, id, manual, nowSec, lastUpdateDate));
     }
 
@@ -307,7 +328,7 @@ module.exports = async function handler(req, res) {
         if (debankKeySet.has(key)) continue;
         disappearedKeySet.add(key);
         toCache.push(p);
-        const manual = await getManualRecord(id, p);
+        const manual = getManualForPos(manualMap, id, p);
         const merged = buildMergedPosition(p, id, manual, nowSec, lastUpdateDate);
         merged.debankGone = true;
         merged.fromManualOnly = !manual;
@@ -317,14 +338,12 @@ module.exports = async function handler(req, res) {
 
     // Восстановление «осиротевших» manual: позиция была в DeBank, затерялась из кэша,
     // но ручные данные в Redis есть (status open, не fullyManual) — показываем как debankGone
-    const { redisGet, redisKeys } = require('../lib/redis');
-    const manualKeys = await redisKeys(`manual:${id}:*`);
-    for (const rk of manualKeys) {
+    for (const rk of manualData.keys) {
       const parsed = parseManualKey(rk);
       if (!parsed) continue;
       const posKey = `${parsed.chain}:${parsed.protocolId}:${parsed.positionKey}`;
       if (debankKeySet.has(posKey) || disappearedKeySet.has(posKey)) continue;
-      const manual = await redisGet(rk);
+      const manual = manualMap.get(rk);
       if (!manual || typeof manual !== 'object') continue;
       const isFullyManual = manual.isFullyManual === true;
       const status = (manual.status || 'open').toLowerCase();
@@ -352,7 +371,7 @@ module.exports = async function handler(req, res) {
 
     setDebankCache(id, toCache);
 
-    const fullyManualPositions = await getFullyManualPositions(id);
+    const fullyManualPositions = buildFullyManualPositions(id, manualMap, manualData.keys);
     for (const mp of fullyManualPositions) {
       const key = `${mp.chain}:${mp.protocol_id}:${mp.position_key}`;
       if (debankKeySet.has(key) || disappearedKeySet.has(key)) continue;

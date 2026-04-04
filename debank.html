@@ -1397,12 +1397,29 @@ async function loadAssets() {
   base = String(base).replace(/\/$/, '') || VERCEL_API;
   const addrLower = addr.toLowerCase();
 
+  let abortTimerClear = null;
+  const fetchOpts = {};
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    fetchOpts.signal = AbortSignal.timeout(120000);
+  } else {
+    const ac = new AbortController();
+    abortTimerClear = setTimeout(() => ac.abort(), 120000);
+    fetchOpts.signal = ac.signal;
+  }
+
   try {
-    const [balanceRes, tokenRes, positionsRes] = await Promise.all([
-      fetch(`${base}/api/debank-balance?id=${encodeURIComponent(addrLower)}`),
-      fetch(`${base}/api/debank-assets?id=${encodeURIComponent(addrLower)}`),
-      fetch(`${base}/api/defi-positions?id=${encodeURIComponent(addrLower)}&_=${Date.now()}`, { cache: 'no-store' })
-    ]);
+    let balanceRes;
+    let tokenRes;
+    let positionsRes;
+    try {
+      [balanceRes, tokenRes, positionsRes] = await Promise.all([
+        fetch(`${base}/api/debank-balance?id=${encodeURIComponent(addrLower)}`, fetchOpts),
+        fetch(`${base}/api/debank-assets?id=${encodeURIComponent(addrLower)}`, fetchOpts),
+        fetch(`${base}/api/defi-positions?id=${encodeURIComponent(addrLower)}&_=${Date.now()}`, { cache: 'no-store', signal: fetchOpts.signal })
+      ]);
+    } finally {
+      if (abortTimerClear) clearTimeout(abortTimerClear);
+    }
 
     if (balanceRes.status === 404 || tokenRes.status === 404) {
       loadingEl.style.display = 'none';
@@ -1543,9 +1560,16 @@ async function loadAssets() {
     loadingEl.style.display = 'none';
     document.getElementById('defiBlock').style.display = 'none';
     document.getElementById('defiSkeleton').style.display = 'none';
-    const errMsg = lang === 'ru'
-      ? 'Нет связи с API. Узнайте свой Vercel URL в dashboard, затем откройте: debank.html?api=https://ваш-проект.vercel.app'
-      : 'No connection to API. Get your Vercel URL from dashboard, then open: debank.html?api=https://your-project.vercel.app';
+    let errMsg;
+    if (err && (err.name === 'AbortError' || err.message === 'The user aborted a request.')) {
+      errMsg = lang === 'ru'
+        ? 'Превышено время ожидания (2 мин). Повторите загрузку или проверьте сеть.'
+        : 'Request timed out (2 min). Retry or check your connection.';
+    } else {
+      errMsg = lang === 'ru'
+        ? 'Нет связи с API. Узнайте свой Vercel URL в dashboard, затем откройте: debank.html?api=https://ваш-проект.vercel.app'
+        : 'No connection to API. Get your Vercel URL from dashboard, then open: debank.html?api=https://your-project.vercel.app';
+    }
     errorEl.innerHTML = errMsg;
     errorEl.style.display = 'block';
   }
